@@ -52,3 +52,6 @@ pairs = zip(blocks[::2], blocks[1::2]); \
 [print(f\"{path}\n  model={m['model']}  run={m['run_id']}  tests={m['total_tests']}  elapsed={m['total_elapsed_seconds']}s  avg_tps={m['avg_tokens_per_second']}\n\") \
   for path, raw in pairs \
   for m in [json.loads(raw)]]" 2>/dev/null || echo "No results found."
+
+precommit:
+	pre-commit run --all-files

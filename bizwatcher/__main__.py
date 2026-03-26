@@ -16,6 +16,8 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=2048, help="Max response tokens")
     parser.add_argument("--tags", type=lambda s: s.split(","), default=None, help="Comma-separated tag filter")
     parser.add_argument("--system-prompt", default=None, help="Override default system prompt")
+    parser.add_argument("--think", action="store_true", default=False, help="Enable thinking/reasoning mode (disabled by default)")
+    parser.add_argument("--debug", action="store_true", default=False, help="Print raw stream chunks to stderr for debugging")
 
     args = parser.parse_args()
     run(args)

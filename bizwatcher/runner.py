@@ -23,7 +23,7 @@ def build_prompt(test: TestCase) -> str:
 
 
 def run(args: argparse.Namespace) -> None:
-    client = LLMClient(args.api_url, args.model, args.temperature, args.max_tokens)
+    client = LLMClient(args.api_url, args.model, args.temperature, args.max_tokens, think=args.think, debug=args.debug)
     tests = load_tests(args.tests_dir, tags=args.tags)
 
     if not tests:
@@ -44,11 +44,12 @@ def run(args: argparse.Namespace) -> None:
     run_start = datetime.now(timezone.utc)
 
     for i, test in enumerate(tests, 1):
-        print(f"[{i}/{len(tests)}] {test.id}: {test.title} ", end="", flush=True)
+        print(f"[{i}/{len(tests)}] {test.id}: {test.title}")
         user_prompt = build_prompt(test)
         timestamp = datetime.now(timezone.utc).isoformat()
 
         try:
+            print("  ", end="", flush=True)
             response, usage, elapsed = client.query(system_prompt, user_prompt)
             tps = compute_tokens_per_second(usage, elapsed)
 
@@ -70,7 +71,7 @@ def run(args: argparse.Namespace) -> None:
             )
 
             tps_str = f" | {tps:.1f} tok/s" if tps else ""
-            print(f"— {elapsed:.1f}s{tps_str}")
+            print(f"\n— {elapsed:.1f}s{tps_str}")
 
         except Exception as e:
             result = TestResult(
