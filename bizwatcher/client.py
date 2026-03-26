@@ -42,7 +42,9 @@ class LLMClient:
             return self._query_ollama_native(system_prompt, user_prompt)
         return self._query_openai(system_prompt, user_prompt)
 
-    def _query_ollama_native(self, system_prompt: str, user_prompt: str) -> tuple[str, object, float]:
+    def _query_ollama_native(
+        self, system_prompt: str, user_prompt: str
+    ) -> tuple[str, object, float]:
         """Call Ollama's /api/chat directly — supports think: false."""
         payload = {
             "model": self.model,
@@ -97,7 +99,9 @@ class LLMClient:
         usage.total_tokens = total_tokens
         return text, usage, elapsed
 
-    def _query_openai(self, system_prompt: str, user_prompt: str) -> tuple[str, object, float]:
+    def _query_openai(
+        self, system_prompt: str, user_prompt: str
+    ) -> tuple[str, object, float]:
         """Call any OpenAI-compatible endpoint via the OpenAI SDK."""
         start = time.monotonic()
         stream = self._openai_client.chat.completions.create(

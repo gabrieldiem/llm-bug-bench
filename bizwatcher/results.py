@@ -18,8 +18,7 @@ def get_next_run_id(results_dir: str, model: str) -> str:
         return "run_001"
 
     existing = [
-        d.name for d in model_dir.iterdir()
-        if d.is_dir() and d.name.startswith("run_")
+        d.name for d in model_dir.iterdir() if d.is_dir() and d.name.startswith("run_")
     ]
     if not existing:
         return "run_001"

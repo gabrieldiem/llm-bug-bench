@@ -23,7 +23,14 @@ def build_prompt(test: TestCase) -> str:
 
 
 def run(args: argparse.Namespace) -> None:
-    client = LLMClient(args.api_url, args.model, args.temperature, args.max_tokens, think=args.think, debug=args.debug)
+    client = LLMClient(
+        args.api_url,
+        args.model,
+        args.temperature,
+        args.max_tokens,
+        think=args.think,
+        debug=args.debug,
+    )
     tests = load_tests(args.tests_dir, tags=args.tags)
 
     if not tests:
@@ -54,7 +61,9 @@ def run(args: argparse.Namespace) -> None:
             tps = compute_tokens_per_second(usage, elapsed)
 
             prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
-            completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
+            completion_tokens = (
+                getattr(usage, "completion_tokens", None) if usage else None
+            )
             total_tokens = getattr(usage, "total_tokens", None) if usage else None
 
             result = TestResult(

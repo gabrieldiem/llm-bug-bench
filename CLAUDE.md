@@ -20,7 +20,10 @@ python -m bizwatcher --api-url http://localhost:11434/v1 --model llama3:8b
 make build      # build image
 make results    # print summary
 make clean      # delete results
+make precommit  # run black formatter, mypy type checking and pylint static checking
 ```
+
+If you want to run a bare command run it with the virtual env: "source .venv/bin/activate && cmd"
 
 **CLI args:** `--api-url`, `--model`, `--tests-dir`, `--results-dir`, `--temperature` (0.1), `--max-tokens` (2048), `--tags`, `--system-prompt`
 
