@@ -1,0 +1,20 @@
+id: theory_bft_002
+title: "Byzantine Fault Tolerance"
+language: theory
+tags: [byzantine, fault-tolerance, distributed-systems]
+difficulty: hard
+
+prompt: |
+  In the context of distributed systems:
+
+  1. Explain what a Byzantine fault is and how it differs from a crash fault.
+  2. Why are 3f+1 nodes required to tolerate f Byzantine faults? Walk through
+     the reasoning.
+  3. Name a real-world consensus protocol that handles Byzantine faults and
+     briefly describe how it works.
+
+expected_issues:
+  - "Byzantine fault: node can behave arbitrarily (send conflicting messages, lie, etc.)"
+  - "Crash fault: node simply stops responding"
+  - "3f+1 reasoning: need 2f+1 honest nodes to form a majority even when f are malicious"
+  - "Could reference PBFT, Tendermint, or HotStuff"

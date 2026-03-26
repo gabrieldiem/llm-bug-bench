@@ -1,0 +1,20 @@
+id: theory_cap_001
+title: "CAP Theorem trade-offs"
+language: theory
+tags: [cap-theorem, distributed-systems]
+difficulty: medium
+
+prompt: |
+  A team is designing a distributed key-value store that must remain available
+  during network partitions. They claim it will also provide strong consistency.
+
+  1. Explain why this claim is problematic, referencing the CAP theorem.
+  2. Describe a practical system that makes the AP trade-off and explain
+     how it handles consistency after partitions heal.
+  3. Give an example of when choosing CP over AP would be the right decision.
+
+expected_issues:
+  - "CAP theorem states you cannot have C+A+P simultaneously"
+  - "Should mention eventual consistency as the AP trade-off"
+  - "Could reference Cassandra, DynamoDB, or Riak as AP systems"
+  - "CP example: banking/financial systems where consistency is critical"

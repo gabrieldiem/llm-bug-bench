@@ -1,0 +1,44 @@
+id: go_grpc_005
+title: "Missing error handling in gRPC call"
+language: go
+tags: [error-handling, grpc, distributed-systems]
+difficulty: easy
+
+prompt: |
+  The following Go code makes a gRPC call to a remote service.
+  Identify all bugs related to error handling and resource management.
+
+code: |
+  package main
+
+  import (
+      "context"
+      "fmt"
+      "log"
+
+      "google.golang.org/grpc"
+      pb "example.com/proto/userservice"
+  )
+
+  func getUser(userID string) *pb.User {
+      conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+      if err != nil {
+          log.Printf("warning: %v", err)
+      }
+
+      client := pb.NewUserServiceClient(conn)
+      resp, _ := client.GetUser(context.Background(), &pb.GetUserRequest{Id: userID})
+      return resp.User
+  }
+
+  func main() {
+      user := getUser("123")
+      fmt.Println("User:", user.Name)
+  }
+
+expected_issues:
+  - "Connection error is logged but execution continues with a nil/invalid conn"
+  - "gRPC call error is silently discarded with `_`"
+  - "resp could be nil if the call failed, causing nil pointer dereference on resp.User"
+  - "Connection is never closed (missing defer conn.Close())"
+  - "No context timeout — call could hang indefinitely"

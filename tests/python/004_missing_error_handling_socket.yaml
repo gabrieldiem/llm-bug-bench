@@ -1,0 +1,29 @@
+id: py_socket_004
+title: "Missing error handling in socket code"
+language: python
+tags: [error-handling, socket, networking]
+difficulty: easy
+
+prompt: |
+  The following Python code connects to a remote server and reads data.
+  Identify all bugs related to error handling and resource management.
+
+code: |
+  import socket
+
+  def fetch_data(host, port):
+      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      sock.connect((host, port))
+      sock.sendall(b"GET /data\r\n")
+      data = sock.recv(4096)
+      return data.decode("utf-8")
+
+  result = fetch_data("192.168.1.100", 8080)
+  print(result)
+
+expected_issues:
+  - "No exception handling — connect, sendall, and recv can all raise socket.error"
+  - "Socket is never closed (no try/finally or context manager)"
+  - "recv(4096) may return partial data — no loop to read until complete"
+  - "No connection timeout — connect could hang indefinitely"
+  - "Assumes UTF-8 encoding without handling UnicodeDecodeError"

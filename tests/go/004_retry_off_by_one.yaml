@@ -1,0 +1,46 @@
+id: go_retry_004
+title: "Retry loop off-by-one error"
+language: go
+tags: [retry, off-by-one, distributed-systems]
+difficulty: medium
+
+prompt: |
+  The following Go code implements a retry mechanism for an HTTP request.
+  Identify all bugs in the retry logic and explain the consequences.
+
+code: |
+  package main
+
+  import (
+      "fmt"
+      "net/http"
+      "time"
+  )
+
+  func fetchWithRetry(url string, maxRetries int) (*http.Response, error) {
+      var lastErr error
+      for i := 0; i <= maxRetries; i++ {
+          resp, err := http.Get(url)
+          if err == nil && resp.StatusCode == 200 {
+              return resp, nil
+          }
+          lastErr = err
+          time.Sleep(time.Duration(i) * time.Second)
+      }
+      return nil, fmt.Errorf("failed after %d retries: %w", maxRetries, lastErr)
+  }
+
+  func main() {
+      resp, err := fetchWithRetry("http://example.com/api", 3)
+      if err != nil {
+          fmt.Println(err)
+          return
+      }
+      fmt.Println("Status:", resp.StatusCode)
+  }
+
+expected_issues:
+  - "`i <= maxRetries` means maxRetries+1 total attempts (4 instead of 3 retries)"
+  - "First sleep is 0 seconds (when i=0), so no backoff on first retry"
+  - "Response body is never closed on non-200 responses, causing resource leak"
+  - "lastErr could be nil if the error was a non-200 status code, making the wrapped error misleading"

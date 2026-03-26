@@ -1,0 +1,58 @@
+id: go_deadlock_002
+title: "Deadlock from inconsistent mutex ordering"
+language: go
+tags: [deadlock, mutex, goroutine]
+difficulty: medium
+
+prompt: |
+  The following Go code transfers balances between two accounts using mutexes.
+  Identify the bug and explain under what conditions it manifests.
+
+code: |
+  package main
+
+  import (
+      "fmt"
+      "sync"
+  )
+
+  type Account struct {
+      mu      sync.Mutex
+      balance int
+  }
+
+  func transfer(from, to *Account, amount int) {
+      from.mu.Lock()
+      defer from.mu.Unlock()
+      to.mu.Lock()
+      defer to.mu.Unlock()
+
+      if from.balance >= amount {
+          from.balance -= amount
+          to.balance += amount
+      }
+  }
+
+  func main() {
+      a := &Account{balance: 1000}
+      b := &Account{balance: 1000}
+
+      var wg sync.WaitGroup
+      wg.Add(2)
+
+      go func() {
+          defer wg.Done()
+          transfer(a, b, 100)
+      }()
+      go func() {
+          defer wg.Done()
+          transfer(b, a, 50)
+      }()
+
+      wg.Wait()
+      fmt.Println("A:", a.balance, "B:", b.balance)
+  }
+
+expected_issues:
+  - "Deadlock: goroutine 1 locks A then waits for B, goroutine 2 locks B then waits for A"
+  - "Fix: always lock in a consistent order (e.g., by account ID)"

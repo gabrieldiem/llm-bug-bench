@@ -1,0 +1,41 @@
+id: py_async_005
+title: "Asyncio task swallows cancellation"
+language: python
+tags: [asyncio, cancellation, resource-leak]
+difficulty: hard
+
+prompt: |
+  The following Python code runs an async worker that should be cancellable.
+  Identify the bug and explain the consequences for graceful shutdown.
+
+code: |
+  import asyncio
+
+  async def worker():
+      while True:
+          try:
+              print("Working...")
+              await asyncio.sleep(1)
+              # simulate some work
+              data = await fetch_remote_data()
+              process(data)
+          except Exception:
+              print("Error occurred, continuing...")
+              continue
+
+  async def main():
+      task = asyncio.create_task(worker())
+      await asyncio.sleep(5)
+      task.cancel()
+      try:
+          await task
+      except asyncio.CancelledError:
+          print("Worker cancelled")
+
+  asyncio.run(main())
+
+expected_issues:
+  - "`except Exception` catches asyncio.CancelledError (which inherits from BaseException in 3.9+, but from Exception in 3.8)"
+  - "On Python <3.9, the cancellation is silently swallowed and the worker keeps running"
+  - "Even on Python >=3.9 where CancelledError inherits from BaseException, the broad except catches other real errors silently"
+  - "Fix: catch specific exceptions, or add `except asyncio.CancelledError: raise` before the broad except"

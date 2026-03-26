@@ -1,0 +1,26 @@
+id: go_chan_003
+title: "Unbuffered channel blocks forever"
+language: go
+tags: [channel, goroutine, deadlock]
+difficulty: easy
+
+prompt: |
+  The following Go code tries to send and receive on a channel.
+  Identify the bug and explain why it hangs.
+
+code: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      ch := make(chan int)
+      ch <- 42
+      value := <-ch
+      fmt.Println(value)
+  }
+
+expected_issues:
+  - "Unbuffered channel send blocks until a receiver is ready, but send and receive are in the same goroutine"
+  - "Program deadlocks immediately at `ch <- 42`"
+  - "Fix: use a buffered channel `make(chan int, 1)` or send from a separate goroutine"

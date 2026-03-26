@@ -1,0 +1,35 @@
+id: py_retry_003
+title: "Broken exponential backoff"
+language: python
+tags: [retry, backoff, distributed-systems]
+difficulty: medium
+
+prompt: |
+  The following Python code implements exponential backoff for retrying a failed operation.
+  Identify all bugs and explain the consequences.
+
+code: |
+  import time
+  import requests
+
+  def fetch_with_retry(url, max_retries=5, base_delay=1):
+      for attempt in range(max_retries):
+          try:
+              response = requests.get(url, timeout=30)
+              response.raise_for_status()
+              return response.json()
+          except requests.RequestException as e:
+              delay = base_delay * 2 ** attempt
+              print(f"Attempt {attempt} failed, retrying in {delay}s...")
+              if attempt == max_retries:
+                  raise
+              time.sleep(delay)
+
+  result = fetch_with_retry("http://api.example.com/data")
+  print(result)
+
+expected_issues:
+  - "`attempt == max_retries` is never true because range(max_retries) produces 0..max_retries-1"
+  - "The exception is never re-raised — function returns None silently after all retries are exhausted"
+  - "No jitter in the backoff — all clients retry at the exact same times (thundering herd)"
+  - "delay grows to 16s on last attempt (2^4) which may be excessive without a cap"

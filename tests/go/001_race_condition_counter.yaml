@@ -1,0 +1,40 @@
+id: go_race_001
+title: "Race condition in concurrent counter"
+language: go
+tags: [race-condition, goroutine, mutex]
+difficulty: easy
+
+prompt: |
+  The following Go code is intended to safely increment a shared counter
+  from multiple goroutines. Identify all bugs and explain the consequences.
+
+code: |
+  package main
+
+  import (
+      "fmt"
+      "sync"
+  )
+
+  var counter int
+
+  func increment(wg *sync.WaitGroup) {
+      defer wg.Done()
+      for i := 0; i < 1000; i++ {
+          counter++
+      }
+  }
+
+  func main() {
+      var wg sync.WaitGroup
+      for i := 0; i < 10; i++ {
+          wg.Add(1)
+          go increment(&wg)
+      }
+      wg.Wait()
+      fmt.Println("Counter:", counter)
+  }
+
+expected_issues:
+  - "Data race on `counter` — no mutex or atomic operation protects concurrent writes"
+  - "Final value will be non-deterministic and less than 10000"

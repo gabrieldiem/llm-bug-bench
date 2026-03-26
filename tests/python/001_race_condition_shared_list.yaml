@@ -1,0 +1,37 @@
+id: py_race_001
+title: "Race condition on shared list"
+language: python
+tags: [race-condition, threading]
+difficulty: easy
+
+prompt: |
+  The following Python code uses multiple threads to collect results into a shared list.
+  Identify all bugs and explain the consequences.
+
+code: |
+  import threading
+
+  results = []
+
+  def worker(n):
+      for i in range(1000):
+          results.append(n * 1000 + i)
+
+  threads = []
+  for n in range(10):
+      t = threading.Thread(target=worker, args=(n,))
+      threads.append(t)
+      t.start()
+
+  for t in threads:
+      t.join()
+
+  print(f"Total results: {len(results)}")
+
+expected_issues:
+  - "list.append is thread-safe in CPython due to the GIL, but this is an implementation detail, not a language guarantee"
+  - "Code relies on GIL behavior — would break on other Python implementations (PyPy with STM, GraalPy, etc.)"
+  - "If the operation were more complex (e.g., check-then-append), it would be a clear race condition"
+
+notes: |
+  This is a subtle one. A strong LLM should note the GIL nuance rather than just saying it's buggy.

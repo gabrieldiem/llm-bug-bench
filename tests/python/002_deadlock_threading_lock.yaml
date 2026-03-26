@@ -1,0 +1,34 @@
+id: py_deadlock_002
+title: "Deadlock with non-reentrant lock"
+language: python
+tags: [deadlock, threading, lock]
+difficulty: medium
+
+prompt: |
+  The following Python code uses a threading.Lock to protect shared state.
+  Identify the bug and explain when it occurs.
+
+code: |
+  import threading
+
+  lock = threading.Lock()
+  data = {"count": 0}
+
+  def increment():
+      with lock:
+          data["count"] += 1
+
+  def batch_increment(n):
+      with lock:
+          for _ in range(n):
+              increment()
+
+  t = threading.Thread(target=batch_increment, args=(5,))
+  t.start()
+  t.join()
+  print(data["count"])
+
+expected_issues:
+  - "threading.Lock is not reentrant — batch_increment acquires the lock, then increment tries to acquire it again"
+  - "This causes a deadlock on the second acquire"
+  - "Fix: use threading.RLock (reentrant lock) instead"
