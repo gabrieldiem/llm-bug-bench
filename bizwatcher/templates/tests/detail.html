@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ test.id }} — bizantine-watcher{% endblock %}
+{% block nav_tests %}text-white font-semibold{% endblock %}
+{% block content %}
+<div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+  <a href="/tests" class="hover:underline text-blue-600 dark:text-blue-400">Tests</a> /
+  <span class="font-semibold text-gray-700 dark:text-gray-200">{{ test.id }}</span>
+</div>
+
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 max-w-4xl">
+  <div class="flex items-start justify-between mb-4">
+    <div>
+      <h1 class="text-xl font-bold">{{ test.title }}</h1>
+      <div class="flex gap-2 mt-2 text-xs">
+        <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 font-medium">{{ test.language }}</span>
+        {% if test.difficulty == 'hard' %}
+          <span class="px-2 py-0.5 rounded text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30 font-medium">{{ test.difficulty }}</span>
+        {% elif test.difficulty == 'medium' %}
+          <span class="px-2 py-0.5 rounded text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30 font-medium">{{ test.difficulty }}</span>
+        {% else %}
+          <span class="px-2 py-0.5 rounded text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30 font-medium">{{ test.difficulty }}</span>
+        {% endif %}
+        {% for tag in test.tags %}
+          <span class="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">{{ tag }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    <a href="/tests/{{ test.id }}/edit"
+       class="text-blue-600 dark:text-blue-400 hover:underline text-sm">Edit</a>
+  </div>
+
+  <div class="space-y-4">
+    <div>
+      <h2 class="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Prompt</h2>
+      <pre class="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 rounded-md p-3">{{ test.prompt }}</pre>
+    </div>
+
+    {% if test.code %}
+    <div>
+      <h2 class="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Code</h2>
+      <pre class="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 rounded-md p-3 font-mono">{{ test.code }}</pre>
+    </div>
+    {% endif %}
+
+    {% if test.expected_issues %}
+    <div>
+      <h2 class="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Expected Issues</h2>
+      <ul class="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
+        {% for issue in test.expected_issues %}
+          <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if test.notes %}
+    <div>
+      <h2 class="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Notes</h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400">{{ test.notes }}</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

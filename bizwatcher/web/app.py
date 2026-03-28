@@ -31,9 +31,11 @@ def create_app(
     templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
     app.state.templates = templates
 
-    from .routes import dashboard, runs
+    from .routes import dashboard, ollama, runs, tests
 
     app.include_router(dashboard.router)
     app.include_router(runs.router)
+    app.include_router(ollama.router)
+    app.include_router(tests.router)
 
     return app

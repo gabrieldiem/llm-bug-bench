@@ -1,0 +1,47 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-400">
+  {{ error }}
+</div>
+{% elif models %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for model in models %}
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+    <div class="flex items-start justify-between mb-2">
+      <h3 class="font-mono font-semibold text-sm">{{ model.name }}</h3>
+      <button onclick="deleteModel('{{ model.name }}')"
+              class="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors text-xs" title="Delete">
+        &times;
+      </button>
+    </div>
+    <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+      {% if model.parameter_size %}
+      <div class="flex justify-between">
+        <span>Parameters</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-300">{{ model.parameter_size }}</span>
+      </div>
+      {% endif %}
+      <div class="flex justify-between">
+        <span>Size</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-300">{{ "%.1f"|format(model.size / 1073741824) }} GB</span>
+      </div>
+      {% if model.quantization %}
+      <div class="flex justify-between">
+        <span>Quantization</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-300">{{ model.quantization }}</span>
+      </div>
+      {% endif %}
+      {% if model.family %}
+      <div class="flex justify-between">
+        <span>Family</span>
+        <span class="font-semibold text-gray-700 dark:text-gray-300">{{ model.family }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
+  No models found. Pull a model using the form above.
+</div>
+{% endif %}

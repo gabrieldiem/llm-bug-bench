@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Test Cases — bizantine-watcher{% endblock %}
+{% block nav_tests %}text-white font-semibold{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Test Cases</h1>
+  <a href="/tests/new"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-md transition-colors">
+    New Test
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 mb-6 text-sm">
+  <div>
+    <label class="text-gray-500 dark:text-gray-400 text-xs uppercase mr-1">Language</label>
+    <select onchange="applyFilters()" id="filter-language"
+            class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      <option value="">All</option>
+      {% for lang in languages %}
+        <option value="{{ lang }}" {% if filter_language == lang %}selected{% endif %}>{{ lang }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="text-gray-500 dark:text-gray-400 text-xs uppercase mr-1">Tag</label>
+    <select onchange="applyFilters()" id="filter-tag"
+            class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      <option value="">All</option>
+      {% for t in all_tags %}
+        <option value="{{ t }}" {% if filter_tag == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="text-gray-500 dark:text-gray-400 text-xs uppercase mr-1">Difficulty</label>
+    <select onchange="applyFilters()" id="filter-difficulty"
+            class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm">
+      <option value="">All</option>
+      {% for d in difficulties %}
+        <option value="{{ d }}" {% if filter_difficulty == d %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+{% if tests %}
+<div class="overflow-x-auto">
+  <table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
+      <tr>
+        <th class="px-4 py-3 text-left">ID</th>
+        <th class="px-4 py-3 text-left">Title</th>
+        <th class="px-4 py-3 text-left">Language</th>
+        <th class="px-4 py-3 text-left">Tags</th>
+        <th class="px-4 py-3 text-left">Difficulty</th>
+        <th class="px-4 py-3 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for test in tests %}
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" id="test-row-{{ test.id }}">
+        <td class="px-4 py-3 font-mono">
+          <a href="/tests/{{ test.id }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ test.id }}</a>
+        </td>
+        <td class="px-4 py-3">{{ test.title }}</td>
+        <td class="px-4 py-3">
+          <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs font-medium">{{ test.language }}</span>
+        </td>
+        <td class="px-4 py-3">
+          {% for tag in test.tags %}
+            <span class="inline-block px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs mr-1">{{ tag }}</span>
+          {% endfor %}
+        </td>
+        <td class="px-4 py-3 text-xs">
+          {% if test.difficulty == 'hard' %}
+            <span class="text-red-600 dark:text-red-400 font-medium">{{ test.difficulty }}</span>
+          {% elif test.difficulty == 'medium' %}
+            <span class="text-yellow-600 dark:text-yellow-400 font-medium">{{ test.difficulty }}</span>
+          {% else %}
+            <span class="text-green-600 dark:text-green-400 font-medium">{{ test.difficulty }}</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right space-x-2">
+          <a href="/tests/{{ test.id }}/edit" class="text-blue-600 dark:text-blue-400 hover:underline text-xs">Edit</a>
+          <button onclick="deleteTest('{{ test.id }}')" class="text-red-500 hover:underline text-xs">Delete</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+  <p class="text-gray-500 dark:text-gray-400 mb-4">No test cases match the filters.</p>
+</div>
+{% endif %}
+
+<script>
+function applyFilters() {
+  const lang = document.getElementById('filter-language').value;
+  const tag = document.getElementById('filter-tag').value;
+  const diff = document.getElementById('filter-difficulty').value;
+  const params = new URLSearchParams();
+  if (lang) params.set('language', lang);
+  if (tag) params.set('tag', tag);
+  if (diff) params.set('difficulty', diff);
+  window.location.href = '/tests?' + params.toString();
+}
+
+function deleteTest(id) {
+  if (!confirm('Delete test "' + id + '"? This cannot be undone.')) return;
+  fetch('/api/tests/' + encodeURIComponent(id), {method: 'DELETE'})
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        const row = document.getElementById('test-row-' + id);
+        if (row) row.remove();
+      }
+    });
+}
+</script>
+{% endblock %}
