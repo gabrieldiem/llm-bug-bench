@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — bizantine-watcher{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">All Runs</h1>
+
+{% if runs %}
+<div class="overflow-x-auto">
+  <table class="w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+      <tr>
+        <th class="px-4 py-3 text-left">Model</th>
+        <th class="px-4 py-3 text-left">Run ID</th>
+        <th class="px-4 py-3 text-left">Timestamp</th>
+        <th class="px-4 py-3 text-right">Tests</th>
+        <th class="px-4 py-3 text-right">Avg Score</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for run in runs %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 font-mono">{{ run.model }}</td>
+        <td class="px-4 py-3 font-mono">{{ run.run_id }}</td>
+        <td class="px-4 py-3 text-gray-500">{{ run.timestamp[:19].replace("T", " ") }}</td>
+        <td class="px-4 py-3 text-right">{{ run.total_tests }}</td>
+        <td class="px-4 py-3 text-right">
+          {% if run.avg_score is not none %}
+            {% set s = run.avg_score %}
+            {% if s >= 15 %}
+              <span class="px-2 py-0.5 rounded text-green-700 bg-green-100 font-semibold">{{ s }}</span>
+            {% elif s >= 8 %}
+              <span class="px-2 py-0.5 rounded text-yellow-700 bg-yellow-100 font-semibold">{{ s }}</span>
+            {% else %}
+              <span class="px-2 py-0.5 rounded text-red-600 bg-red-100 font-semibold">{{ s }}</span>
+            {% endif %}
+          {% else %}
+            <span class="text-gray-400">—</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right">
+          <a href="/run/{{ run.model_slug }}/{{ run.run_id }}"
+             class="text-blue-600 hover:underline">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-gray-500">No runs found. Run the benchmark first with <code class="font-mono bg-gray-100 px-1 rounded">bizwatcher run</code>.</p>
+{% endif %}
+{% endblock %}

@@ -14,7 +14,15 @@ make run MODEL=llama3:8b TAGS=deadlock,retry
 # Local
 poetry install
 make run-local MODEL=llama3:8b
-python -m bizwatcher --api-url http://localhost:11434/v1 --model llama3:8b
+python -m bizwatcher run --api-url http://localhost:11434/v1 --model llama3:8b
+
+# Judge (requires OPENAI_API_KEY)
+export OPENAI_API_KEY=sk-...
+python -m bizwatcher judge --run-dir results/llama3_8b/run_001 --tests-dir tests
+
+# Web UI
+make serve PORT=8080
+python -m bizwatcher serve --port 8080
 
 # Utils
 make build      # build image
@@ -25,7 +33,13 @@ make precommit  # run black formatter, mypy type checking and pylint static chec
 
 If you want to run a bare command run it with the virtual env: "source .venv/bin/activate && cmd"
 
-**CLI args:** `--api-url`, `--model`, `--tests-dir`, `--results-dir`, `--temperature` (0.1), `--max-tokens` (2048), `--tags`, `--system-prompt`
+**Subcommands:** `run`, `judge`, `serve`
+
+**run args:** `--api-url`, `--model`, `--tests-dir`, `--results-dir`, `--temperature` (0.1), `--max-tokens` (2048), `--tags`, `--system-prompt`, `--think`, `--debug`
+
+**judge args:** `--run-dir`, `--tests-dir`, `--judge-model` (gpt-5.2-chat-latest)
+
+**serve args:** `--port` (8080), `--results-dir` (./results)
 
 ## Architecture
 

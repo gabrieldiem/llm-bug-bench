@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.run_id }} — {{ meta.model }}{% endblock %}
+{% block content %}
+<div class="mb-4 text-sm text-gray-500">
+  <a href="/" class="hover:underline text-blue-600">Dashboard</a> /
+  <span>{{ meta.model }}</span> /
+  <span class="font-semibold text-gray-700">{{ meta.run_id }}</span>
+</div>
+
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4 mb-6 text-sm grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div><span class="text-gray-500">Model</span><p class="font-mono font-semibold">{{ meta.model }}</p></div>
+  <div><span class="text-gray-500">Run ID</span><p class="font-semibold">{{ meta.run_id }}</p></div>
+  <div><span class="text-gray-500">Timestamp</span><p>{{ meta.timestamp[:19].replace("T", " ") }}</p></div>
+  <div><span class="text-gray-500">Tests</span><p>{{ meta.total_tests }}</p></div>
+  <div><span class="text-gray-500">Total elapsed</span><p>{{ meta.total_elapsed_seconds }}s</p></div>
+  <div><span class="text-gray-500">Avg tok/s</span><p>{{ meta.avg_tokens_per_second or "—" }}</p></div>
+  <div><span class="text-gray-500">Temperature</span><p>{{ meta.temperature }}</p></div>
+  <div><span class="text-gray-500">Max tokens</span><p>{{ meta.max_tokens }}</p></div>
+</div>
+
+<h2 class="text-xl font-bold mb-4">Test Results</h2>
+<div class="overflow-x-auto">
+  <table class="w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+      <tr>
+        <th class="px-4 py-3 text-left">Test ID</th>
+        <th class="px-4 py-3 text-right">Elapsed</th>
+        <th class="px-4 py-3 text-right">Score</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100">
+      {% for row in rows %}
+      <tr class="hover:bg-gray-50">
+        <td class="px-4 py-3 font-mono">
+          {{ row.test_id }}
+          {% if row.error %}
+            <span class="ml-1 text-xs text-red-500">[error]</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right text-gray-500">{{ row.elapsed_seconds }}s</td>
+        <td class="px-4 py-3 text-right">
+          {% if row.score is not none %}
+            {% set s = row.score %}
+            {% if s >= 15 %}
+              <span class="px-2 py-0.5 rounded text-green-700 bg-green-100 font-semibold">{{ s }}</span>
+            {% elif s >= 8 %}
+              <span class="px-2 py-0.5 rounded text-yellow-700 bg-yellow-100 font-semibold">{{ s }}</span>
+            {% else %}
+              <span class="px-2 py-0.5 rounded text-red-600 bg-red-100 font-semibold">{{ s }}</span>
+            {% endif %}
+          {% else %}
+            <span class="text-gray-400">—</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right">
+          <a href="/run/{{ row.model_slug }}/{{ row.run_id }}/{{ row.test_id }}"
+             class="text-blue-600 hover:underline">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

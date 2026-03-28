@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ result.test_id }} — {{ result.model }}{% endblock %}
+{% block content %}
+<div class="mb-4 text-sm text-gray-500">
+  <a href="/" class="hover:underline text-blue-600">Dashboard</a> /
+  <a href="/run/{{ model_slug }}/{{ run_id }}" class="hover:underline text-blue-600">{{ run_id }}</a> /
+  <span class="font-semibold text-gray-700">{{ result.test_id }}</span>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+    <h2 class="text-sm font-semibold uppercase text-gray-500 mb-2">Prompt Sent</h2>
+    <pre class="text-xs whitespace-pre-wrap text-gray-800 overflow-auto max-h-96">{{ result.prompt_sent }}</pre>
+  </div>
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+    <h2 class="text-sm font-semibold uppercase text-gray-500 mb-2">LLM Response</h2>
+    {% if result.error %}
+      <p class="text-red-500 text-sm font-semibold">Error: {{ result.error }}</p>
+    {% else %}
+      <pre class="text-xs whitespace-pre-wrap text-gray-800 overflow-auto max-h-96">{{ result.response }}</pre>
+    {% endif %}
+    <div class="mt-3 text-xs text-gray-400 flex gap-4">
+      <span>{{ result.elapsed_seconds }}s</span>
+      {% if result.tokens_per_second %}<span>{{ result.tokens_per_second }} tok/s</span>{% endif %}
+      {% if result.total_tokens %}<span>{{ result.total_tokens }} tokens</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if jr %}
+<div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+  <div class="flex items-center gap-3 mb-4">
+    <h2 class="text-lg font-bold">Judge Evaluation</h2>
+    {% set s = jr.score %}
+    {% if s >= 15 %}
+      <span class="text-2xl font-bold px-3 py-1 rounded text-green-700 bg-green-100">{{ s }}/20</span>
+    {% elif s >= 8 %}
+      <span class="text-2xl font-bold px-3 py-1 rounded text-yellow-700 bg-yellow-100">{{ s }}/20</span>
+    {% else %}
+      <span class="text-2xl font-bold px-3 py-1 rounded text-red-600 bg-red-100">{{ s }}/20</span>
+    {% endif %}
+    <span class="text-xs text-gray-400 ml-auto">{{ jr.judge_model }} · {{ jr.judge_elapsed_seconds }}s</span>
+  </div>
+
+  {% if jr.error %}
+    <p class="text-red-500 text-sm mb-4">Judge error: {{ jr.error }}</p>
+  {% else %}
+    <p class="text-sm text-gray-700 mb-5">{{ jr.explanation }}</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+      <div>
+        <h3 class="font-semibold text-green-700 mb-1">Issues Matched ({{ jr.issues_matched | length }})</h3>
+        {% if jr.issues_matched %}
+          <ul class="list-disc list-inside space-y-1 text-gray-700">
+            {% for issue in jr.issues_matched %}
+              <li>{{ issue }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-gray-400 italic">None</p>
+        {% endif %}
+      </div>
+      <div>
+        <h3 class="font-semibold text-red-600 mb-1">Issues Missed ({{ jr.issues_missed | length }})</h3>
+        {% if jr.issues_missed %}
+          <ul class="list-disc list-inside space-y-1 text-gray-700">
+            {% for issue in jr.issues_missed %}
+              <li>{{ issue }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-gray-400 italic">None</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if jr.issues_found %}
+    <div class="mt-4">
+      <h3 class="font-semibold text-gray-600 mb-1 text-sm">Issues Found by LLM (judge's extraction)</h3>
+      <ul class="list-disc list-inside space-y-1 text-sm text-gray-700">
+        {% for issue in jr.issues_found %}
+          <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% else %}
+<div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-sm">
+  Not yet judged. Run <code class="font-mono bg-gray-100 px-1 rounded">bizwatcher judge --run-dir ...</code> to score this result.
+</div>
+{% endif %}
+{% endblock %}

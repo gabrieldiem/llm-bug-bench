@@ -43,3 +43,20 @@ class RunMetadata:
     total_elapsed_seconds: float
     avg_tokens_per_second: float | None
     test_ids: list[str] = field(default_factory=list)
+
+
+@dataclass
+class JudgeResult:
+    test_id: str
+    judge_model: str
+    score: int
+    explanation: str
+    issues_found: list[str]
+    issues_expected: list[str]
+    issues_matched: list[str]
+    issues_missed: list[str]
+    timestamp: str
+    judge_prompt_tokens: int | None
+    judge_completion_tokens: int | None
+    judge_elapsed_seconds: float
+    error: str | None = None
