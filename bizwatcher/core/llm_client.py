@@ -7,14 +7,22 @@ import urllib.request
 
 import openai
 
+from ..exceptions import ProviderError
+from ..models import ProviderConfig
+
+GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 
 class LLMClient:
+    """OpenAI-compatible LLM client with Ollama native streaming support."""
+
     def __init__(
         self,
         api_url: str,
         model: str,
         temperature: float,
         max_tokens: int,
+        api_key: str = "ollama",
         think: bool = False,
         debug: bool = False,
     ):
@@ -24,15 +32,12 @@ class LLMClient:
         self.think = think
         self.debug = debug
 
-        # If api_url ends with /v1, assume Ollama and use its native /api/chat
-        # which has a first-class `think` parameter. Other endpoints use the
-        # OpenAI SDK path.
         base = api_url.rstrip("/")
-        if base.endswith("/v1"):
+        if base.endswith("/v1") and api_key == "ollama":
             self._ollama_base: str | None = base[:-3]
         else:
             self._ollama_base = None
-            self._openai_client = openai.OpenAI(base_url=api_url, api_key="ollama")
+            self._openai_client = openai.OpenAI(base_url=api_url, api_key=api_key)
 
     def query(self, system_prompt: str, user_prompt: str) -> tuple[str, object, float]:
         """Returns (response_text, usage_object, elapsed_seconds)."""
@@ -45,7 +50,6 @@ class LLMClient:
     def _query_ollama_native(
         self, system_prompt: str, user_prompt: str
     ) -> tuple[str, object, float]:
-        """Call Ollama's /api/chat directly — supports think: false."""
         payload = {
             "model": self.model,
             "messages": [
@@ -81,7 +85,6 @@ class LLMClient:
                 if msg.get("thinking"):
                     reasoning_parts.append(msg["thinking"])
                 if msg.get("content"):
-                    print(msg["content"], end="", flush=True)
                     content_parts.append(msg["content"])
                 if obj.get("done"):
                     prompt_tokens = obj.get("prompt_eval_count")
@@ -94,15 +97,14 @@ class LLMClient:
             pass
 
         usage = _Usage()
-        usage.prompt_tokens = prompt_tokens
-        usage.completion_tokens = completion_tokens
-        usage.total_tokens = total_tokens
+        usage.prompt_tokens = prompt_tokens  # type: ignore[attr-defined]
+        usage.completion_tokens = completion_tokens  # type: ignore[attr-defined]
+        usage.total_tokens = total_tokens  # type: ignore[attr-defined]
         return text, usage, elapsed
 
     def _query_openai(
         self, system_prompt: str, user_prompt: str
     ) -> tuple[str, object, float]:
-        """Call any OpenAI-compatible endpoint via the OpenAI SDK."""
         start = time.monotonic()
         stream = self._openai_client.chat.completions.create(
             model=self.model,
@@ -125,7 +127,6 @@ class LLMClient:
             if chunk.choices:
                 delta = chunk.choices[0].delta
                 if delta.content:
-                    print(delta.content, end="", flush=True)
                     content_parts.append(delta.content)
                 rc = (delta.model_extra or {}).get("thinking")
                 if rc:
@@ -135,3 +136,29 @@ class LLMClient:
         elapsed = time.monotonic() - start
         text = "".join(content_parts) or "".join(reasoning_parts)
         return text, usage, elapsed
+
+
+def create_client_from_config(config: ProviderConfig, **kwargs) -> LLMClient:
+    """Factory: build an LLMClient from a ProviderConfig."""
+    if config.provider == "ollama":
+        return LLMClient(
+            api_url=config.api_url,
+            model=config.model,
+            api_key="ollama",
+            **kwargs,
+        )
+    if config.provider == "openai":
+        return LLMClient(
+            api_url="https://api.openai.com/v1",
+            model=config.model,
+            api_key=config.api_key,
+            **kwargs,
+        )
+    if config.provider == "gemini":
+        return LLMClient(
+            api_url=GEMINI_OPENAI_BASE_URL,
+            model=config.model,
+            api_key=config.api_key,
+            **kwargs,
+        )
+    raise ProviderError(f"Unknown provider: {config.provider}")

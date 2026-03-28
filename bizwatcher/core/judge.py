@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-import argparse
 import json
-import os
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
+from pathlib import Path
 
 import openai
 
+from ..exceptions import JudgeParseError
+from ..models import JudgeResult, RunProgress
 from .loader import load_tests
-from .models import JudgeResult
 from .results import load_all_results, load_judge_result, save_judge_result
 
 DEFAULT_JUDGE_MODEL = "gpt-5.2-chat-latest"
@@ -27,10 +28,6 @@ Score on a scale of 1–20:
 - 5–8: Few issues found, or explanations are vague and unhelpful
 - 1–4: Issues missed, wrong analysis, or hallucinated bugs
 """
-
-
-class JudgeParseError(ValueError):
-    pass
 
 
 class JudgeClient:
@@ -64,6 +61,106 @@ class JudgeClient:
         completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
 
         return parsed, prompt_tokens, completion_tokens, elapsed
+
+
+def judge_run(
+    run_dir: Path,
+    tests_dir: str,
+    judge_model: str,
+    api_key: str,
+    task_id: str,
+    progress_cb: Callable[[RunProgress], None] | None = None,
+) -> list[JudgeResult]:
+    """Judge all results in a run directory. Returns list of JudgeResults."""
+    client = JudgeClient(model=judge_model, api_key=api_key)
+    results = load_all_results(run_dir)
+
+    if not results:
+        return []
+
+    tests = load_tests(tests_dir)
+    test_index = {t.id: t for t in tests}
+    judge_results: list[JudgeResult] = []
+
+    for i, result in enumerate(results, 1):
+        existing = load_judge_result(run_dir, result.test_id)
+        if existing is not None:
+            judge_results.append(existing)
+            continue
+
+        test = test_index.get(result.test_id)
+        expected_issues = test.expected_issues if test else []
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        if progress_cb:
+            progress_cb(
+                RunProgress(
+                    run_id=run_dir.name,
+                    task_id=task_id,
+                    status="running",
+                    current_test=i,
+                    total_tests=len(results),
+                    current_test_id=result.test_id,
+                    elapsed_seconds=0,
+                    message=f"Judging {result.test_id}",
+                )
+            )
+
+        try:
+            parsed, prompt_tokens, completion_tokens, elapsed = client.evaluate(
+                result.prompt_sent, result.response, expected_issues
+            )
+            score = int(parsed.get("score", 1))
+            jr = JudgeResult(
+                test_id=result.test_id,
+                judge_model=judge_model,
+                score=score,
+                explanation=parsed.get("explanation", ""),
+                issues_found=parsed.get("issues_found", []),
+                issues_expected=expected_issues,
+                issues_matched=parsed.get("issues_matched", []),
+                issues_missed=parsed.get("issues_missed", []),
+                timestamp=timestamp,
+                judge_prompt_tokens=prompt_tokens,
+                judge_completion_tokens=completion_tokens,
+                judge_elapsed_seconds=round(elapsed, 2),
+            )
+        except Exception as e:
+            jr = JudgeResult(
+                test_id=result.test_id,
+                judge_model=judge_model,
+                score=1,
+                explanation="",
+                issues_found=[],
+                issues_expected=expected_issues,
+                issues_matched=[],
+                issues_missed=expected_issues,
+                timestamp=timestamp,
+                judge_prompt_tokens=None,
+                judge_completion_tokens=None,
+                judge_elapsed_seconds=0.0,
+                error=str(e),
+            )
+
+        save_judge_result(run_dir, jr)
+        judge_results.append(jr)
+
+    if progress_cb:
+        scores = [jr.score for jr in judge_results]
+        progress_cb(
+            RunProgress(
+                run_id=run_dir.name,
+                task_id=task_id,
+                status="completed",
+                current_test=len(results),
+                total_tests=len(results),
+                current_test_id=results[-1].test_id if results else "",
+                elapsed_seconds=0,
+                message=f"Judging complete. Avg score: {sum(scores) / len(scores):.1f}",
+            )
+        )
+
+    return judge_results
 
 
 def _build_judge_prompt(
@@ -102,94 +199,4 @@ def _parse_judge_response(raw: str) -> dict:
     except json.JSONDecodeError as e:
         raise JudgeParseError(
             f"Failed to parse judge response as JSON: {e}\nRaw: {raw}"
-        )
-
-
-def judge(args: argparse.Namespace) -> None:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise EnvironmentError("OPENAI_API_KEY environment variable is not set")
-
-    judge_model = getattr(args, "judge_model", DEFAULT_JUDGE_MODEL)
-    client = JudgeClient(model=judge_model, api_key=api_key)
-
-    from pathlib import Path
-
-    run_dir = Path(args.run_dir)
-    results = load_all_results(run_dir)
-
-    if not results:
-        print("No test results found in run directory.")
-        return
-
-    tests = load_tests(args.tests_dir)
-    test_index = {t.id: t for t in tests}
-
-    print(f"Judge model: {judge_model}")
-    print(f"Run dir:     {run_dir}")
-    print(f"Results:     {len(results)}")
-    print("-" * 60)
-
-    scores: list[int] = []
-
-    for i, result in enumerate(results, 1):
-        existing = load_judge_result(run_dir, result.test_id)
-        if existing is not None:
-            print(
-                f"[{i}/{len(results)}] {result.test_id}: SKIP (already judged, score={existing.score})"
-            )
-            scores.append(existing.score)
-            continue
-
-        test = test_index.get(result.test_id)
-        expected_issues = test.expected_issues if test else []
-
-        print(f"[{i}/{len(results)}] {result.test_id}: judging...", end=" ", flush=True)
-        timestamp = datetime.now(timezone.utc).isoformat()
-
-        try:
-            parsed, prompt_tokens, completion_tokens, elapsed = client.evaluate(
-                result.prompt_sent, result.response, expected_issues
-            )
-            score = int(parsed.get("score", 1))
-            jr = JudgeResult(
-                test_id=result.test_id,
-                judge_model=judge_model,
-                score=score,
-                explanation=parsed.get("explanation", ""),
-                issues_found=parsed.get("issues_found", []),
-                issues_expected=expected_issues,
-                issues_matched=parsed.get("issues_matched", []),
-                issues_missed=parsed.get("issues_missed", []),
-                timestamp=timestamp,
-                judge_prompt_tokens=prompt_tokens,
-                judge_completion_tokens=completion_tokens,
-                judge_elapsed_seconds=round(elapsed, 2),
-            )
-            print(f"score={score} ({elapsed:.1f}s)")
-        except Exception as e:
-            jr = JudgeResult(
-                test_id=result.test_id,
-                judge_model=judge_model,
-                score=1,
-                explanation="",
-                issues_found=[],
-                issues_expected=expected_issues,
-                issues_matched=[],
-                issues_missed=expected_issues,
-                timestamp=timestamp,
-                judge_prompt_tokens=None,
-                judge_completion_tokens=None,
-                judge_elapsed_seconds=0.0,
-                error=str(e),
-            )
-            print(f"ERROR: {e}")
-
-        save_judge_result(run_dir, jr)
-        scores.append(jr.score)
-
-    print("-" * 60)
-    if scores:
-        print(
-            f"Scores — min={min(scores)}  max={max(scores)}  avg={sum(scores)/len(scores):.1f}"
-        )
+        ) from e

@@ -5,7 +5,7 @@ import re
 from dataclasses import asdict
 from pathlib import Path
 
-from .models import JudgeResult, RunMetadata, TestResult
+from ..models import JudgeResult, RunMetadata, TestResult
 
 
 def _sanitize_model_name(model: str) -> str:
@@ -88,3 +88,10 @@ def load_all_judge_results(run_dir: Path) -> dict[str, JudgeResult]:
             jr = JudgeResult(**json.load(f))
             results[jr.test_id] = jr
     return results
+
+
+def delete_run(run_dir: Path) -> None:
+    import shutil
+
+    if run_dir.exists():
+        shutil.rmtree(run_dir)

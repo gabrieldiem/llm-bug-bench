@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TestCase:
     id: str
     title: str
@@ -16,7 +16,7 @@ class TestCase:
     notes: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TestResult:
     test_id: str
     model: str
@@ -31,7 +31,7 @@ class TestResult:
     error: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class RunMetadata:
     run_id: str
     model: str
@@ -43,9 +43,12 @@ class RunMetadata:
     total_elapsed_seconds: float
     avg_tokens_per_second: float | None
     test_ids: list[str] = field(default_factory=list)
+    provider: str = "ollama"
+    system_prompt: str = ""
+    think: bool = False
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class JudgeResult:
     test_id: str
     judge_model: str
@@ -60,3 +63,58 @@ class JudgeResult:
     judge_completion_tokens: int | None
     judge_elapsed_seconds: float
     error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OllamaModel:
+    name: str
+    size: int
+    parameter_size: str
+    quantization: str
+    modified_at: str
+    family: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderConfig:
+    provider: str
+    api_url: str
+    api_key: str
+    model: str
+
+
+@dataclass(frozen=True, slots=True)
+class RunConfig:
+    provider_config: ProviderConfig
+    temperature: float = 0.1
+    max_tokens: int = 2048
+    tags: list[str] | None = None
+    system_prompt: str = ""
+    think: bool = False
+    tests_dir: str = "./tests"
+    results_dir: str = "./results"
+
+
+@dataclass(frozen=True, slots=True)
+class RunProgress:
+    run_id: str
+    task_id: str
+    status: str
+    current_test: int
+    total_tests: int
+    current_test_id: str
+    elapsed_seconds: float
+    message: str = ""
+    error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class LeaderboardEntry:
+    model: str
+    provider: str
+    parameter_size: str
+    best_avg_score: float | None
+    latest_avg_score: float | None
+    avg_tokens_per_second: float | None
+    total_runs: int
+    best_run_id: str
