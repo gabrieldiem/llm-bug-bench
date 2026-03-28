@@ -1,0 +1,12 @@
+{# Usage: {% include "partials/_score_badge.html" with context %} expects `score` variable #}
+{% if score is not none %}
+  {% if score >= 15 %}
+    <span class="px-2 py-0.5 rounded text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40 font-semibold">{{ score }}</span>
+  {% elif score >= 8 %}
+    <span class="px-2 py-0.5 rounded text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/40 font-semibold">{{ score }}</span>
+  {% else %}
+    <span class="px-2 py-0.5 rounded text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/40 font-semibold">{{ score }}</span>
+  {% endif %}
+{% else %}
+  <span class="text-gray-400 dark:text-gray-600">&mdash;</span>
+{% endif %}

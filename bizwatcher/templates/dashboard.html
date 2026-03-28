@@ -1,45 +1,50 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — bizantine-watcher{% endblock %}
+{% block nav_dashboard %}text-white font-semibold{% endblock %}
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">All Runs</h1>
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Dashboard</h1>
+  <div class="flex gap-4 text-sm">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 shadow-sm">
+      <span class="text-gray-500 dark:text-gray-400">Models</span>
+      <span class="ml-2 font-bold">{{ total_models }}</span>
+    </div>
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 shadow-sm">
+      <span class="text-gray-500 dark:text-gray-400">Runs</span>
+      <span class="ml-2 font-bold">{{ total_runs }}</span>
+    </div>
+  </div>
+</div>
 
 {% if runs %}
 <div class="overflow-x-auto">
-  <table class="w-full bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
-    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+  <table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
       <tr>
         <th class="px-4 py-3 text-left">Model</th>
         <th class="px-4 py-3 text-left">Run ID</th>
         <th class="px-4 py-3 text-left">Timestamp</th>
         <th class="px-4 py-3 text-right">Tests</th>
+        <th class="px-4 py-3 text-right">Avg tok/s</th>
         <th class="px-4 py-3 text-right">Avg Score</th>
         <th class="px-4 py-3"></th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-gray-100">
+    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
       {% for run in runs %}
-      <tr class="hover:bg-gray-50">
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
         <td class="px-4 py-3 font-mono">{{ run.model }}</td>
-        <td class="px-4 py-3 font-mono">{{ run.run_id }}</td>
-        <td class="px-4 py-3 text-gray-500">{{ run.timestamp[:19].replace("T", " ") }}</td>
+        <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{{ run.run_id }}</td>
+        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ run.timestamp[:19].replace("T", " ") }}</td>
         <td class="px-4 py-3 text-right">{{ run.total_tests }}</td>
+        <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ run.avg_tps or "—" }}</td>
         <td class="px-4 py-3 text-right">
-          {% if run.avg_score is not none %}
-            {% set s = run.avg_score %}
-            {% if s >= 15 %}
-              <span class="px-2 py-0.5 rounded text-green-700 bg-green-100 font-semibold">{{ s }}</span>
-            {% elif s >= 8 %}
-              <span class="px-2 py-0.5 rounded text-yellow-700 bg-yellow-100 font-semibold">{{ s }}</span>
-            {% else %}
-              <span class="px-2 py-0.5 rounded text-red-600 bg-red-100 font-semibold">{{ s }}</span>
-            {% endif %}
-          {% else %}
-            <span class="text-gray-400">—</span>
-          {% endif %}
+          {% set score = run.avg_score %}
+          {% include "partials/_score_badge.html" %}
         </td>
         <td class="px-4 py-3 text-right">
           <a href="/run/{{ run.model_slug }}/{{ run.run_id }}"
-             class="text-blue-600 hover:underline">View</a>
+             class="text-blue-600 dark:text-blue-400 hover:underline">View</a>
         </td>
       </tr>
       {% endfor %}
@@ -47,6 +52,12 @@
   </table>
 </div>
 {% else %}
-<p class="text-gray-500">No runs found. Run the benchmark first with <code class="font-mono bg-gray-100 px-1 rounded">bizwatcher run</code>.</p>
+<div class="bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+  <p class="text-gray-500 dark:text-gray-400 mb-4">No runs found yet.</p>
+  <a href="/runs/new"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors">
+    Start your first run
+  </a>
+</div>
 {% endif %}
 {% endblock %}
