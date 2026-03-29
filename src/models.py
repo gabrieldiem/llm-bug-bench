@@ -86,15 +86,22 @@ class OllamaModel:
 
 
 @dataclass(frozen=True, slots=True)
+class LlamaCppModelInfo:
+    """Status of a single model on a llama.cpp server."""
+
+    name: str
+    status: str  # e.g. "loaded", "unloaded"
+
+
+@dataclass(frozen=True, slots=True)
 class LlamaCppServerInfo:
     """Runtime information from a llama.cpp server instance."""
 
     server_url: str
     health_status: str
-    model_name: str
+    models: list[LlamaCppModelInfo]
     total_slots: int
     idle_slots: int
-    ctx_size: int
 
 
 @dataclass(frozen=True, slots=True)

@@ -21,17 +21,32 @@
     </button>
   </div>
   <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-    <div class="flex justify-between">
-      <span>Model</span>
-      <span class="font-mono font-semibold text-gray-800 dark:text-gray-200">{{ info.model_name }}</span>
-    </div>
-    <div class="flex justify-between">
-      <span>Context Size</span>
-      <span class="font-semibold text-gray-800 dark:text-gray-200">{{ info.ctx_size }}</span>
+    <div>
+      <span>Models</span>
+      {% if info.models %}
+      <div class="mt-1 space-y-1">
+        {% for model in info.models %}
+        <div class="flex items-center justify-between">
+          <span class="font-mono font-semibold text-gray-800 dark:text-gray-200 text-xs truncate mr-2">{{ model.name }}</span>
+          {% if model.status == "loaded" %}
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 shrink-0">loaded</span>
+          {% else %}
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 shrink-0">{{ model.status }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <span class="font-semibold text-gray-400 dark:text-gray-500 italic ml-2">none</span>
+      {% endif %}
     </div>
     <div class="flex justify-between">
       <span>Slots</span>
+      {% if info.total_slots == 0 %}
+      <span class="font-semibold text-gray-400 dark:text-gray-500 italic">unavailable</span>
+      {% else %}
       <span class="font-semibold text-gray-800 dark:text-gray-200">{{ info.idle_slots }} idle / {{ info.total_slots }} total</span>
+      {% endif %}
     </div>
     <div class="flex justify-between">
       <span>Server URL</span>

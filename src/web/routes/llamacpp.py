@@ -55,7 +55,7 @@ async def api_list_models_json(
     """Return a JSON array of available model names from the llama.cpp server."""
     try:
         models = await manager.list_models()
-        return JSONResponse(models)
+        return JSONResponse([m.name for m in models])
     except LlamaCppConnectionError:
         return JSONResponse([])
 

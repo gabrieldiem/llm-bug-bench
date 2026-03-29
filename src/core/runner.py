@@ -193,6 +193,8 @@ def run_with_config(
 
     if config.provider_config.provider == "ollama":
         _unload_ollama_model(config.provider_config.api_url, model)
+    elif config.provider_config.provider == "llamacpp":
+        _unload_llamacpp_model(config.provider_config.api_url, model)
 
     logger.info(
         "Run completed: %d tests in %.1fs, avg_tps=%s, output=%s",
@@ -231,6 +233,20 @@ def _unload_ollama_model(api_url: str, model: str) -> None:
         logger.info("Unloaded model from VRAM: %s", model)
     except Exception as e:
         logger.warning("Failed to unload model %s: %s", model, e)
+
+
+def _unload_llamacpp_model(api_url: str, model: str) -> None:
+    """Evict a model from llama.cpp server VRAM via /v1/models/stop."""
+    base_url = api_url.rstrip("/")
+    try:
+        httpx.post(
+            f"{base_url}/v1/models/stop",
+            json={"model": model},
+            timeout=10,
+        )
+        logger.info("Unloaded llama.cpp model from VRAM: %s", model)
+    except Exception as e:
+        logger.warning("Failed to unload llama.cpp model %s: %s", model, e)
 
 
 def _make_batch_callback(

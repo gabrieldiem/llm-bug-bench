@@ -7,9 +7,22 @@ import logging
 import httpx
 
 from ..exceptions import LlamaCppConnectionError
-from ..models import LlamaCppServerInfo
+from ..models import LlamaCppModelInfo, LlamaCppServerInfo
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_api_error(exc: httpx.HTTPStatusError) -> str:
+    """Extract a human-readable message from an HTTP error response."""
+    try:
+        body = exc.response.json()
+        if "error" in body and isinstance(body["error"], dict):
+            return body["error"].get("message", str(exc))
+        if "message" in body:
+            return body["message"]
+    except (ValueError, KeyError):
+        pass
+    return str(exc)
 
 
 class LlamaCppManager:
@@ -36,6 +49,11 @@ class LlamaCppManager:
                 resp = await client.get(f"{self._base_url}/health", timeout=10)
                 data = resp.json()
                 return data.get("status", "error")
+        except httpx.HTTPStatusError as e:
+            msg = _extract_api_error(e)
+            raise LlamaCppConnectionError(
+                f"Cannot reach llama.cpp server at {self._base_url}: {msg}"
+            ) from e
         except httpx.HTTPError as e:
             raise LlamaCppConnectionError(
                 f"Cannot reach llama.cpp server at {self._base_url}: {e}"
@@ -52,6 +70,11 @@ class LlamaCppManager:
                 resp = await client.get(f"{self._base_url}/props", timeout=10)
                 resp.raise_for_status()
                 return resp.json()
+        except httpx.HTTPStatusError as e:
+            msg = _extract_api_error(e)
+            raise LlamaCppConnectionError(
+                f"Cannot get server props: {msg}"
+            ) from e
         except httpx.HTTPError as e:
             raise LlamaCppConnectionError(
                 f"Cannot get server props: {e}"
@@ -60,24 +83,36 @@ class LlamaCppManager:
     async def get_slots(self) -> list[dict]:
         """Fetch active inference slot information.
 
+        Returns empty list when the server returns a 4xx error (e.g. /slots
+        requires the --slots flag on some llama.cpp builds).
+
         Raises:
-            LlamaCppConnectionError: If the server is unreachable.
+            LlamaCppConnectionError: If the server is unreachable or returns 5xx.
         """
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(f"{self._base_url}/slots", timeout=10)
                 resp.raise_for_status()
                 return resp.json()
+        except httpx.HTTPStatusError as e:
+            if 400 <= e.response.status_code < 500:
+                msg = _extract_api_error(e)
+                logger.warning("/slots returned %d: %s — treating as unavailable", e.response.status_code, msg)
+                return []
+            msg = _extract_api_error(e)
+            raise LlamaCppConnectionError(
+                f"Cannot get slot info: {msg}"
+            ) from e
         except httpx.HTTPError as e:
             raise LlamaCppConnectionError(
                 f"Cannot get slot info: {e}"
             ) from e
 
-    async def list_models(self) -> list[str]:
-        """Fetch model names via the OpenAI-compatible /v1/models endpoint.
+    async def list_models(self) -> list[LlamaCppModelInfo]:
+        """Fetch models via the OpenAI-compatible /v1/models endpoint.
 
         Returns:
-            List of model ID strings.
+            List of LlamaCppModelInfo with name and status.
 
         Raises:
             LlamaCppConnectionError: If the server is unreachable.
@@ -89,20 +124,48 @@ class LlamaCppManager:
                 )
                 resp.raise_for_status()
                 data = resp.json()
-                return [m["id"] for m in data.get("data", [])]
+                return [
+                    LlamaCppModelInfo(
+                        name=m["id"],
+                        status=m.get("status", {}).get("value", "unknown"),
+                    )
+                    for m in data.get("data", [])
+                ]
+        except httpx.HTTPStatusError as e:
+            msg = _extract_api_error(e)
+            raise LlamaCppConnectionError(
+                f"Cannot list models: {msg}"
+            ) from e
         except httpx.HTTPError as e:
             raise LlamaCppConnectionError(
                 f"Cannot list models: {e}"
             ) from e
 
+    async def unload_model(self, model: str) -> None:
+        """Unload a model from VRAM via POST /v1/models/stop.
+
+        Logs a warning on failure instead of raising — eviction is best-effort.
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self._base_url}/v1/models/stop",
+                    json={"model": model},
+                    timeout=10,
+                )
+                resp.raise_for_status()
+                logger.info("Unloaded llama.cpp model from VRAM: %s", model)
+        except httpx.HTTPError as e:
+            logger.warning("Failed to unload llama.cpp model %s: %s", model, e)
+
     async def get_server_info(self) -> LlamaCppServerInfo:
-        """Aggregate health, props, and slots into a single server info object.
+        """Aggregate health, models, and slots into a single server info object.
 
         Raises:
-            LlamaCppConnectionError: If any endpoint is unreachable.
+            LlamaCppConnectionError: If health or models endpoint is unreachable.
         """
         status = await self.health()
-        props = await self.get_props()
+        models = await self.list_models()
         slots = await self.get_slots()
 
         total_slots = len(slots)
@@ -111,12 +174,7 @@ class LlamaCppManager:
         return LlamaCppServerInfo(
             server_url=self._base_url,
             health_status=status,
-            model_name=props.get("default_generation_settings", {}).get(
-                "model", "unknown"
-            ),
+            models=models,
             total_slots=total_slots,
             idle_slots=idle_slots,
-            ctx_size=props.get("default_generation_settings", {}).get(
-                "n_ctx", 0
-            ),
         )
