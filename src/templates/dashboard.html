@@ -2,6 +2,23 @@
 {% block title %}Dashboard — llm-bug-bench{% endblock %}
 {% block nav_dashboard %}text-white font-semibold{% endblock %}
 {% block content %}
+{% if active_task_ids %}
+<div class="mb-4 flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+  <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+  </span>
+  <span>{{ active_task_ids | length }} run{{ 's' if active_task_ids | length > 1 else '' }} in progress</span>
+  <div class="flex gap-2 ml-auto">
+    {% for task_id in active_task_ids %}
+    <a href="/runs/progress/{{ task_id }}"
+       class="font-medium underline hover:text-blue-900 dark:hover:text-blue-100">
+      View{{ ' #' + loop.index | string if active_task_ids | length > 1 else '' }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-2xl font-bold">Dashboard</h1>
   <div class="flex gap-4 text-sm">

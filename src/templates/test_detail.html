@@ -31,13 +31,17 @@
 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-5" id="judge-section">
   <div class="flex items-center gap-3 mb-4">
     <h2 class="text-lg font-bold">Judge Evaluation</h2>
-    {% set s = jr.score %}
-    {% if s >= 15 %}
-      <span class="text-2xl font-bold px-3 py-1 rounded text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">{{ s }}/20</span>
-    {% elif s >= 8 %}
-      <span class="text-2xl font-bold px-3 py-1 rounded text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/40">{{ s }}/20</span>
+    {% if jr.error %}
+      <span class="text-2xl font-bold px-3 py-1 rounded text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/40">Error</span>
     {% else %}
-      <span class="text-2xl font-bold px-3 py-1 rounded text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/40">{{ s }}/20</span>
+      {% set s = jr.score %}
+      {% if s >= 15 %}
+        <span class="text-2xl font-bold px-3 py-1 rounded text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/40">{{ s }}/20</span>
+      {% elif s >= 8 %}
+        <span class="text-2xl font-bold px-3 py-1 rounded text-yellow-700 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/40">{{ s }}/20</span>
+      {% else %}
+        <span class="text-2xl font-bold px-3 py-1 rounded text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/40">{{ s }}/20</span>
+      {% endif %}
     {% endif %}
     <span class="text-xs text-gray-400 dark:text-gray-500 ml-auto">{{ jr.judge_model }} &middot; {{ jr.judge_elapsed_seconds }}s</span>
   </div>

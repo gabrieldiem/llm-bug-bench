@@ -39,6 +39,7 @@ async def api_start_judge(
 
     api_key = body.get("api_key", "") or os.environ.get("OPENAI_API_KEY", "")
     judge_model = body.get("judge_model", "") or DEFAULT_JUDGE_MODEL
+    force = bool(body.get("force", False))
 
     if not api_key:
         logger.warning("Judge rejected: OPENAI_API_KEY not set")
@@ -55,6 +56,7 @@ async def api_start_judge(
 
     task_id = task_manager.create_task_id()
     progress_cb = task_manager.make_progress_callback(task_id)
+    run_key = f"{model_slug}/{run_id}"
 
     logger.info(
         "Judge started via API: %s/%s model=%s task_id=%s",
@@ -73,10 +75,26 @@ async def api_start_judge(
             api_key,
             task_id,
             progress_cb,
+            force,
         )
 
     task_manager.submit(task_id, _judge())
+    task_manager.register_judge_task(run_key, task_id)
 
+    return JSONResponse({"task_id": task_id})
+
+
+@router.get("/api/judge/{model_slug}/{run_id}/active")
+async def api_active_judge(
+    model_slug: str,
+    run_id: str,
+    task_manager: TaskManager = Depends(get_task_manager),
+):
+    """Return the active judge task_id for this run, if one is running."""
+    run_key = f"{model_slug}/{run_id}"
+    task_id = task_manager.get_active_judge_task(run_key)
+    if not task_id:
+        return JSONResponse({"error": "No active judge task"}, status_code=404)
     return JSONResponse({"task_id": task_id})
 
 
@@ -85,17 +103,17 @@ async def api_judge_progress(
     task_id: str,
     task_manager: TaskManager = Depends(get_task_manager),
 ):
-    """Stream judge progress events via SSE."""
+    """Stream judge progress events via SSE, replaying full history on connect."""
     entry = task_manager.get_entry(task_id)
     if not entry:
         return JSONResponse({"error": "Task not found"}, status_code=404)
 
+    queue = task_manager.subscribe(task_id)
+
     async def _stream():
         while True:
             try:
-                progress = await asyncio.wait_for(
-                    entry.progress_queue.get(), timeout=30
-                )
+                progress = await asyncio.wait_for(queue.get(), timeout=30)
             except asyncio.TimeoutError:
                 yield f"data: {json.dumps({'status': 'heartbeat'})}\n\n"
                 continue

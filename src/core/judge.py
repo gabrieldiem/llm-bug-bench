@@ -57,7 +57,6 @@ class JudgeClient:
         start = time.monotonic()
         completion = self._client.chat.completions.create(
             model=self._model,
-            temperature=0.0,
             messages=[
                 {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
@@ -82,6 +81,7 @@ def judge_run(
     api_key: str,
     task_id: str,
     progress_cb: Callable[[RunProgress], None] | None = None,
+    force: bool = False,
 ) -> list[JudgeResult]:
     """Judge all results in a run directory.
 
@@ -116,7 +116,7 @@ def judge_run(
 
     for i, result in enumerate(results, 1):
         existing = load_judge_result(run_dir, result.test_id)
-        if existing is not None:
+        if existing is not None and not force:
             logger.info(
                 "[%d/%d] %s: skipped (already judged, score=%d)",
                 i,

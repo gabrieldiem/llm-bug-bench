@@ -92,8 +92,9 @@ def handle_run_detail(
                 "test_id": r.test_id,
                 "elapsed_seconds": r.elapsed_seconds,
                 "tokens_per_second": r.tokens_per_second,
-                "score": jr.score if jr else None,
+                "score": jr.score if jr and not jr.error else None,
                 "error": r.error,
+                "judge_error": jr.error if jr else None,
                 "model_slug": model_slug,
                 "run_id": run_id,
             }
@@ -238,13 +239,13 @@ async def api_run_progress(
     if not entry:
         return JSONResponse({"error": "Task not found"}, status_code=404)
 
+    queue = task_manager.subscribe(task_id)
+
     async def _stream():
         last_progress = None
         while True:
             try:
-                progress = await asyncio.wait_for(
-                    entry.progress_queue.get(), timeout=30
-                )
+                progress = await asyncio.wait_for(queue.get(), timeout=30)
             except asyncio.TimeoutError:
                 yield f"data: {json.dumps({'status': 'heartbeat'})}\n\n"
                 continue

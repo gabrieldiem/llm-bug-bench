@@ -2,6 +2,55 @@
 
 from __future__ import annotations
 
+import asyncio
+
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# TaskManager progress delivery
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_task_manager_progress_delivery():
+    """Progress events reach subscribers even when callback is created before submit."""
+    from src.models import RunProgress
+    from src.web.task_manager import TaskManager
+
+    tm = TaskManager()
+    task_id = tm.create_task_id()
+    progress_cb = tm.make_progress_callback(task_id)  # before submit — the bug scenario
+
+    completed = asyncio.Event()
+
+    async def fake_work():
+        await asyncio.to_thread(
+            progress_cb,
+            RunProgress(
+                run_id="run_001",
+                task_id=task_id,
+                status="running",
+                current_test=1,
+                total_tests=2,
+                current_test_id="test_1",
+                elapsed_seconds=0.0,
+                message="Testing",
+            ),
+        )
+        completed.set()
+
+    tm.submit(task_id, fake_work())
+    queue = tm.subscribe(task_id)
+
+    await completed.wait()
+    await asyncio.sleep(0.05)  # let call_soon_threadsafe dispatch
+
+    assert not queue.empty(), "Progress event should have been delivered"
+    event = queue.get_nowait()
+    assert event.current_test == 1
+    assert event.status == "running"
+
 
 # ---------------------------------------------------------------------------
 # Health

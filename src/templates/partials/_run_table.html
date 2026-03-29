@@ -26,15 +26,16 @@
     {% for row in rows %}
     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
       <td class="px-4 py-3 font-mono">
-        {{ row.test_id }}
+        <div>{{ row.test_id }}</div>
         {% if row.error %}
-          <span class="ml-1 text-xs text-red-500">[error]</span>
+          <div class="mt-0.5 text-xs text-red-500 font-sans font-normal break-all">{{ row.error }}</div>
         {% endif %}
       </td>
       <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.elapsed_seconds }}s</td>
       <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.tokens_per_second or "—" }}</td>
       <td class="px-4 py-3 text-right">
         {% set score = row.score %}
+        {% set judge_error = row.judge_error %}
         {% include "partials/_score_badge.html" %}
       </td>
       <td class="px-4 py-3 text-right">

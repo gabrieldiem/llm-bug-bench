@@ -25,6 +25,9 @@
   <!-- Error display -->
   <div id="progress-error" class="hidden bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-400 mb-4"></div>
 
+  <!-- Live test log -->
+  <div id="test-log" class="space-y-1 max-h-64 overflow-y-auto text-sm font-mono mb-4"></div>
+
   <!-- Completed section -->
   <div id="progress-done" class="hidden">
     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-700 dark:text-green-400 mb-4">
@@ -48,8 +51,35 @@
   const errorEl = document.getElementById('progress-error');
   const doneEl = document.getElementById('progress-done');
   const linkEl = document.getElementById('progress-link');
+  const logEl = document.getElementById('test-log');
 
   let lastTotal = 0;
+  let currentRow = null; // the in-progress log row
+
+  function createLogRow(testId) {
+    const row = document.createElement('div');
+    row.className = 'flex items-start gap-2 px-1 py-0.5 rounded';
+    row.innerHTML =
+      '<span class="status-icon flex-shrink-0 mt-px"><span class="spinner inline-block w-3 h-3"></span></span>' +
+      '<span class="text-gray-700 dark:text-gray-300">' + testId + '</span>' +
+      '<span class="error-msg text-xs text-red-500 truncate hidden"></span>';
+    logEl.appendChild(row);
+    logEl.scrollTop = logEl.scrollHeight;
+    return row;
+  }
+
+  function markRowDone(row, hasError, errorMsg) {
+    if (!row) return;
+    const icon = row.querySelector('.status-icon');
+    if (hasError) {
+      icon.innerHTML = '<span class="text-red-500">\u2717</span>';
+      const errEl = row.querySelector('.error-msg');
+      errEl.textContent = errorMsg || '';
+      errEl.classList.remove('hidden');
+    } else {
+      icon.innerHTML = '<span class="text-green-500">\u2713</span>';
+    }
+  }
 
   fetch('/api/runs/' + taskId + '/progress')
     .then(response => {
@@ -77,6 +107,7 @@
                 errorEl.classList.remove('hidden');
                 bar.classList.remove('bg-blue-600');
                 bar.classList.add('bg-red-500');
+                markRowDone(currentRow, true, data.error);
                 return;
               }
 
@@ -93,6 +124,8 @@
                 if (data.message) msgEl.textContent = data.message;
                 const total = data.total_tests ?? lastTotal;
                 countEl.textContent = total + ' / ' + total;
+                markRowDone(currentRow, false);
+                currentRow = null;
                 return;
               }
 
@@ -103,11 +136,18 @@
                 testEl.textContent = data.current_test_id;
                 countEl.textContent = data.current_test + ' / ' + data.total_tests;
                 lastTotal = data.total_tests;
+
                 if (data.error) {
+                  // This event is an error notification for the current test — mark it and move on
+                  markRowDone(currentRow, true, data.error);
+                  currentRow = null;
                   msgEl.textContent = '\u2717 ' + data.current_test_id + ': ' + data.error;
                   msgEl.classList.add('text-red-500', 'dark:text-red-400');
                   msgEl.classList.remove('text-gray-600', 'dark:text-gray-400');
                 } else {
+                  // New test starting — resolve previous row as success, open a new one
+                  markRowDone(currentRow, false);
+                  currentRow = createLogRow(data.current_test_id);
                   if (data.message) msgEl.textContent = data.message;
                   msgEl.classList.remove('text-red-500', 'dark:text-red-400');
                   msgEl.classList.add('text-gray-600', 'dark:text-gray-400');

@@ -8,7 +8,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from ...core.results import load_all_judge_results, load_metadata
-from ..dependencies import get_results_dir
+from ..dependencies import get_results_dir, get_task_manager
+from ..task_manager import TaskManager
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ def health_check():
 def handle_dashboard(
     request: Request,
     results_dir: str = Depends(get_results_dir),
+    task_manager: TaskManager = Depends(get_task_manager),
     sort: str = "timestamp",
     order: str = "desc",
 ):
@@ -66,6 +68,7 @@ def handle_dashboard(
     runs.sort(key=key_fn, reverse=(order == "desc"))
 
     total_models = len({r["model"] for r in runs})
+    active_task_ids = task_manager.running_task_ids()
 
     is_htmx = request.headers.get("HX-Request") == "true"
     template = "partials/_dashboard_table.html" if is_htmx else "dashboard.html"
@@ -80,5 +83,6 @@ def handle_dashboard(
             "total_runs": len(runs),
             "sort": sort,
             "order": order,
+            "active_task_ids": active_task_ids,
         },
     )
