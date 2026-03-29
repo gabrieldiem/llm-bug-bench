@@ -1,123 +1,133 @@
 # bizantine-watcher
 
-A Dockerized benchmark suite that tests small/local LLMs on their ability to detect bugs in code. Focused on concurrency issues, error handling, and distributed systems patterns in Go and Python, plus theoretical questions.
+A web-based benchmark suite that evaluates LLMs' ability to detect bugs in code. Focused on concurrency issues, error handling, and distributed systems patterns in Go and Python, plus theoretical questions (CAP theorem, Byzantine faults).
 
-The tool sends buggy code snippets to an OpenAI-compatible API (Ollama, LM Studio, vLLM, llama.cpp, etc.), records the raw LLM output for manual review, and measures response speed (tokens/sec).
+Supports **Ollama** (local models), **OpenAI**, and **Google Gemini** as providers. Includes an LLM judge that automatically scores responses on a 1–20 rubric, a sortable leaderboard, and full test case management — all through a web UI.
+
+## Features
+
+- **Multi-provider support** — run benchmarks against Ollama, OpenAI, or Gemini from a single interface
+- **Ollama model management** — pull, list, and delete models directly from the UI
+- **LLM judge scoring** — automated evaluation with a 1–20 rubric using an OpenAI judge model
+- **Sortable leaderboard** — compare models by score, speed (tok/s), and number of runs
+- **Test case CRUD** — create, edit, and delete YAML test cases from the browser
+- **Run comparison** — side-by-side per-test scoring between any two runs
+- **Export** — download results as CSV or Markdown
+- **Dark mode** — toggle with system preference detection
+- **Real-time progress** — SSE streaming for run execution and judge scoring
 
 ## Quick Start
 
+### Prerequisites
+
+- Python 3.13+
+- [Poetry](https://python-poetry.org/)
+- [Ollama](https://ollama.com) running locally (for local models)
+
+### Install and run
+
 ```bash
-# Build and run against a local Ollama model
-make run MODEL=llama3:8b
-
-# Run with a different model or API
-make run MODEL=qwen2:7b API_URL=http://localhost:11434/v1
-
-# Run only specific test categories
-make run MODEL=llama3:8b TAGS=deadlock,retry
-
-# Show all previous results
-make results
+git clone <repo-url> && cd bizantine-watcher
+poetry install
+make serve
 ```
 
-Results are saved to `results/<model_name>/run_001/`.
+Open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ## Makefile Reference
 
-| Target           | Description                                    |
-| ---------------- | ---------------------------------------------- |
-| `make build`     | Build the Docker image                         |
-| `make run`       | Build and run the full suite (Docker)          |
-| `make run-local` | Run without Docker (pip-installs dependencies) |
-| `make results`   | Print a summary of all saved runs              |
-| `make clean`     | Delete all results                             |
+| Target          | Description                              |
+| --------------- | ---------------------------------------- |
+| `make serve`    | Start the web UI (default port 8080)     |
+| `make build`    | Build the Docker image                   |
+| `make clean`    | Delete all results                       |
+| `make results`  | Print a summary of all saved runs        |
+| `make precommit`| Run formatters and linters               |
 
-Variables (all optional, override on the command line):
+Variables (override on the command line):
 
-| Variable      | Default                     | Description                           |
-| ------------- | --------------------------- | ------------------------------------- |
-| `MODEL`       | `llama3:8b`                 | Model name passed to the API          |
-| `API_URL`     | `http://localhost:11434/v1` | Base URL of the OpenAI-compatible API |
-| `TAGS`        | —                           | Comma-separated tag filter            |
-| `TEMPERATURE` | `0.1`                       | Sampling temperature                  |
-| `MAX_TOKENS`  | `2048`                      | Max response tokens                   |
+| Variable       | Default      | Description              |
+| -------------- | ------------ | ------------------------ |
+| `PORT`         | `8080`       | Web server port          |
+| `RESULTS_DIR`  | `./results`  | Results output directory |
+| `TESTS_DIR`    | `./tests`    | YAML test cases directory|
 
-## Requirements
+## Configuration
 
-- Docker and Docker Compose
-- An OpenAI-compatible LLM server running locally (e.g., [Ollama](https://ollama.com))
+### Environment variables
 
-## CLI Reference
+| Variable         | Default                    | Description                                |
+| ---------------- | -------------------------- | ------------------------------------------ |
+| `PORT`           | `8080`                     | Web server port                            |
+| `RESULTS_DIR`    | `./results`                | Results output directory                   |
+| `TESTS_DIR`      | `./tests`                  | YAML test cases directory                  |
+| `OLLAMA_URL`     | `http://localhost:11434`   | Ollama API base URL (overridable in the UI)|
+| `OPENAI_API_KEY` | —                          | Required for LLM judge scoring             |
+
+### CLI arguments
 
 ```
-python -m bizwatcher --api-url <URL> --model <MODEL> [OPTIONS]
+python -m bizwatcher [OPTIONS]
 ```
 
-| Argument          | Required | Default     | Description                                                               |
-| ----------------- | -------- | ----------- | ------------------------------------------------------------------------- |
-| `--api-url`       | Yes      | —           | Base URL of the OpenAI-compatible API (e.g., `http://localhost:11434/v1`) |
-| `--model`         | Yes      | —           | Model name passed to the API and used for organizing results              |
-| `--tests-dir`     | No       | `./tests`   | Directory containing YAML test case files                                 |
-| `--results-dir`   | No       | `./results` | Directory where results are written                                       |
-| `--temperature`   | No       | `0.1`       | Sampling temperature (lower = more deterministic)                         |
-| `--max-tokens`    | No       | `2048`      | Maximum tokens in the LLM response                                        |
-| `--tags`          | No       | —           | Comma-separated tag filter; only runs tests matching at least one tag     |
-| `--system-prompt` | No       | Built-in    | Override the default system prompt                                        |
+| Argument        | Default              | Description                 |
+| --------------- | -------------------- | --------------------------- |
+| `--port`        | `8080` / `$PORT`     | Web server port             |
+| `--results-dir` | `./results`          | Results output directory    |
+| `--tests-dir`   | `./tests`            | YAML test cases directory   |
+| `--debug`       | off                  | Enable debug-level logging  |
 
-## Running with Docker
+## Web UI Guide
 
-### Using docker compose (recommended)
+| Page                     | URL                                         | Description                                    |
+| ------------------------ | ------------------------------------------- | ---------------------------------------------- |
+| Dashboard                | `/`                                         | All runs with stats and average scores         |
+| Leaderboard              | `/leaderboard`                              | Sortable model ranking by score, speed, runs   |
+| New Run                  | `/runs/new`                                 | Configure and start a benchmark run            |
+| Run Detail               | `/run/{model}/{run_id}`                     | Per-test results table with scores             |
+| Test Detail              | `/run/{model}/{run_id}/{test_id}`           | Prompt, response, and judge evaluation         |
+| Test Cases               | `/tests`                                    | Browse, filter, create, edit, delete tests     |
+| Ollama Models            | `/ollama`                                   | Pull, list, and delete Ollama models           |
+| Compare                  | `/compare`                                  | Side-by-side run comparison                    |
 
-Edit `docker-compose.yml` to set your default model and API URL:
+## Providers
 
-```yaml
-services:
-  bizwatcher:
-    build: .
-    network_mode: host
-    volumes:
-      - ./results:/app/results
-      - ./tests:/app/tests
-    command: >
-      --api-url http://localhost:11434/v1
-      --model llama3:8b
-```
+All provider configuration is done through the **New Run** page (`/runs/new`).
 
-Then run:
+### Ollama (local)
 
-```bash
-docker compose build
-docker compose run bizwatcher
-```
+Select "Ollama" as the provider, enter the model name (e.g., `llama3:8b`), and optionally change the Ollama URL. The URL defaults to `OLLAMA_URL` env var or `http://localhost:11434`.
 
-Override the model at runtime:
+### OpenAI
 
-```bash
-docker compose run bizwatcher --api-url http://localhost:11434/v1 --model qwen2:7b
-```
+Select "OpenAI", enter your model name (e.g., `gpt-4o`) and API key. The key is used only for the duration of the run and is never stored on disk.
 
-### Using docker directly
+### Google Gemini
 
-```bash
-docker build -t bizwatcher .
+Select "Gemini", enter your model name (e.g., `gemini-2.5-flash`) and API key. Uses the Gemini OpenAI-compatible endpoint.
 
-docker run --rm --network host \
-  -v $(pwd)/results:/app/results \
-  -v $(pwd)/tests:/app/tests \
-  bizwatcher \
-  --api-url http://localhost:11434/v1 \
-  --model llama3:8b
-```
+## LLM Judge
 
-### Running without Docker
+The judge uses an OpenAI model (default: `gpt-5.2-chat-latest`) to score LLM responses against expected issues on a 1–20 rubric:
 
-```bash
-pip install -r requirements.txt
+| Score   | Meaning                                                  |
+| ------- | -------------------------------------------------------- |
+| 17–20   | All issues found with precise root cause and consequence |
+| 13–16   | Most issues found, minor gaps                            |
+| 9–12    | Some issues found, significant gaps                      |
+| 5–8     | Few issues found, or vague explanations                  |
+| 1–4     | Issues missed, wrong analysis, or hallucinated bugs      |
 
-python -m bizwatcher \
-  --api-url http://localhost:11434/v1 \
-  --model llama3:8b
-```
+### Requirements
+
+Set `OPENAI_API_KEY` as an environment variable, or provide it per-request through the judge modal in the UI.
+
+### Usage
+
+1. Navigate to a run detail page (`/run/{model}/{run_id}`)
+2. Click **Judge All**
+3. Enter your API key (optional if env var is set) and judge model
+4. Watch the progress bar as each test is scored
 
 ## Test Suite
 
@@ -129,7 +139,7 @@ The suite ships with 12 test cases across three categories:
 | ----------------- | ----------------------------------------- | ----------------------------------------- | ---------- |
 | `go_race_001`     | Race condition in concurrent counter      | race-condition, goroutine, mutex          | easy       |
 | `go_deadlock_002` | Deadlock from inconsistent mutex ordering | deadlock, mutex, goroutine                | medium     |
-| `go_chan_003`     | Unbuffered channel blocks forever         | channel, goroutine, deadlock              | easy       |
+| `go_chan_003`      | Unbuffered channel blocks forever         | channel, goroutine, deadlock              | easy       |
 | `go_retry_004`    | Retry loop off-by-one error               | retry, off-by-one, distributed-systems    | medium     |
 | `go_grpc_005`     | Missing error handling in gRPC call       | error-handling, grpc, distributed-systems | easy       |
 
@@ -150,45 +160,40 @@ The suite ships with 12 test cases across three categories:
 | `theory_cap_001` | CAP Theorem trade-offs    | cap-theorem, distributed-systems                | medium     |
 | `theory_bft_002` | Byzantine Fault Tolerance | byzantine, fault-tolerance, distributed-systems | hard       |
 
-### Filtering by tags
+### Adding new tests
 
-Run only specific categories:
+Create a new `.yaml` file anywhere under `tests/`. It is auto-discovered — no code changes needed.
 
-```bash
-# Only deadlock-related tests
-docker compose run bizwatcher --api-url http://localhost:11434/v1 --model llama3:8b --tags deadlock
+```yaml
+id: unique_test_id        # must be unique across all tests
+title: "Short description"
+language: go               # go | python | theory (or any string)
+tags: [tag1, tag2]         # used for filtering on the Tests page
+difficulty: easy           # easy | medium | hard
 
-# Only distributed systems topics
-docker compose run bizwatcher --api-url http://localhost:11434/v1 --model llama3:8b --tags distributed-systems
+prompt: |
+  The prompt sent to the LLM. Describe what you want it to analyze.
 
-# Multiple tags (runs tests matching ANY of the tags)
-docker compose run bizwatcher --api-url http://localhost:11434/v1 --model llama3:8b --tags "race-condition,deadlock"
+code: |                    # optional — omit entirely for theory questions
+  func main() {
+      // buggy code here
+  }
+
+expected_issues:           # ground truth for judge scoring
+  - "Description of bug 1"
+  - "Description of bug 2"
+
+notes: |                   # optional, not sent to the LLM
+  Reviewer notes.
 ```
 
-## Results
+You can also create, edit, and delete tests directly from the web UI at `/tests`.
 
-Results are organized by model name and auto-incrementing run ID:
+## Results Format
 
-```
-results/
-  llama3_8b/
-    run_001/
-      metadata.json
-      go_race_001.json
-      go_deadlock_002.json
-      ...
-    run_002/
-      ...
-  qwen2_7b/
-    run_001/
-      ...
-```
+Results are stored as JSON files in `results/<model_name>/run_NNN/`.
 
-Running the same model multiple times auto-increments the run ID (`run_001`, `run_002`, ...).
-
-### Per-test result file
-
-Each `<test_id>.json` contains:
+### Per-test result (`<test_id>.json`)
 
 ```json
 {
@@ -206,9 +211,27 @@ Each `<test_id>.json` contains:
 }
 ```
 
-### Run metadata file
+### Judge result (`<test_id>.judge.json`)
 
-Each `metadata.json` contains aggregate info:
+```json
+{
+  "test_id": "go_race_001",
+  "judge_model": "gpt-5.2-chat-latest",
+  "score": 15,
+  "explanation": "The LLM correctly identified...",
+  "issues_found": ["Race condition on counter"],
+  "issues_expected": ["Unsynchronized access to shared counter"],
+  "issues_matched": ["Unsynchronized access to shared counter"],
+  "issues_missed": [],
+  "timestamp": "2025-03-26T10:35:00+00:00",
+  "judge_prompt_tokens": 1200,
+  "judge_completion_tokens": 180,
+  "judge_elapsed_seconds": 2.1,
+  "error": null
+}
+```
+
+### Run metadata (`metadata.json`)
 
 ```json
 {
@@ -221,104 +244,97 @@ Each `metadata.json` contains aggregate info:
   "total_tests": 12,
   "total_elapsed_seconds": 58.4,
   "avg_tokens_per_second": 72.3,
-  "test_ids": ["go_race_001", "go_deadlock_002", "..."]
+  "test_ids": ["go_race_001", "..."],
+  "provider": "ollama",
+  "system_prompt": "You are a senior software engineer...",
+  "think": false
 }
 ```
 
-## Adding New Tests
+## Architecture
 
-Create a new `.yaml` file anywhere under `tests/`. It is auto-discovered on the next run — no code changes needed.
-
-### Test case schema
-
-```yaml
-id: unique_test_id # must be unique across all tests
-title: "Short description"
-language: go # go | python | theory (or any string)
-tags: [tag1, tag2] # used for --tags filtering
-difficulty: easy # easy | medium | hard (informational only)
-
-prompt: |
-  The prompt sent to the LLM. Describe what you want it to analyze.
-
-code: | # omit entirely for theory questions
-  // The buggy code goes here
-  func main() {
-      // ...
-  }
-
-expected_issues: # for your own reference when reviewing results
-  - "Description of bug 1"
-  - "Description of bug 2"
-
-notes: | # optional, not sent to the LLM
-  Any reviewer notes.
+```
+bizwatcher/
+├── __init__.py
+├── __main__.py              # Entry point — starts FastAPI server
+├── models.py                # Frozen dataclasses for all data types
+├── exceptions.py            # Domain exceptions
+├── metrics.py               # Token throughput calculation
+├── core/
+│   ├── llm_client.py        # OpenAI SDK + Ollama native streaming client
+│   ├── llm_protocol.py      # LLMClientProtocol for DI
+│   ├── runner.py             # Benchmark execution with progress callbacks
+│   ├── judge.py              # LLM judge scoring (1–20 rubric)
+│   ├── loader.py             # YAML test case discovery and CRUD
+│   ├── results.py            # JSON persistence for results/metadata/judge
+│   ├── ollama_manager.py     # Async Ollama REST API (list/pull/delete)
+│   └── leaderboard.py        # Cross-run score aggregation
+├── web/
+│   ├── app.py                # FastAPI app factory
+│   ├── dependencies.py       # DI providers (Depends)
+│   ├── task_manager.py       # Background task + SSE queue management
+│   └── routes/
+│       ├── dashboard.py      # GET /
+│       ├── runs.py           # Run execution, detail, progress SSE
+│       ├── tests.py          # Test CRUD
+│       ├── ollama.py         # Ollama model management
+│       ├── judge.py          # Judge trigger + SSE
+│       ├── leaderboard.py    # Sortable leaderboard
+│       ├── export.py         # CSV/Markdown download
+│       └── compare.py        # Side-by-side comparison
+├── templates/                # Jinja2 + HTMX + Tailwind templates
+│   ├── base.html
+│   ├── dashboard.html
+│   ├── leaderboard.html
+│   ├── run_detail.html
+│   ├── test_detail.html
+│   ├── compare.html
+│   ├── runs/
+│   ├── tests/
+│   ├── ollama/
+│   └── partials/
+└── tests/                    # YAML test cases (auto-discovered)
+    ├── go/
+    ├── python/
+    └── theory/
 ```
 
-- `id`, `title`, `language`, `tags`, `difficulty`, and `prompt` are required.
-- `code` is optional (omit for theory questions). When present, it is appended to the prompt in a fenced code block.
-- `expected_issues` and `notes` are never sent to the LLM — they exist only to help you review results.
-
-### Example: adding a Rust test
+## Docker
 
 ```bash
-mkdir -p tests/rust
+# Build and run
+docker compose build
+docker compose up
+
+# Or manually
+docker build -t bizwatcher .
+docker run --rm --network host -v $(pwd)/results:/app/results -v $(pwd)/tests:/app/tests bizwatcher
 ```
 
-Create `tests/rust/001_use_after_move.yaml`:
+The container starts the web server on port 8080 by default.
 
-```yaml
-id: rust_move_001
-title: "Use after move"
-language: rust
-tags: [ownership, move-semantics]
-difficulty: easy
+## Development
 
-prompt: |
-  Identify the compilation error in this Rust code and explain why it occurs.
+```bash
+# Install dependencies
+poetry install
 
-code: |
-  fn main() {
-      let s = String::from("hello");
-      let t = s;
-      println!("{}", s);
-  }
+# Run formatters and linters
+make precommit
 
-expected_issues:
-  - "s is used after being moved to t"
+# Start with debug logging
+python -m bizwatcher --debug
 ```
 
-Run the suite again and the new test is automatically picked up.
+### Dependencies
 
-## Speed Metrics
-
-The tool measures tokens/sec using the `usage` field from the API response:
-
-```
-tokens/sec = completion_tokens / elapsed_seconds
-```
-
-Ollama, vLLM, LM Studio, and llama.cpp all return token counts in the standard OpenAI response format. If a provider does not return usage data, the metric is skipped and a warning is printed.
-
-## Project Structure
-
-```
-bizantine-watcher/
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── bizwatcher/
-│   ├── __init__.py
-│   ├── __main__.py       # CLI entry point (argparse)
-│   ├── runner.py          # Core test runner loop
-│   ├── client.py          # OpenAI API client wrapper
-│   ├── models.py          # Dataclasses: TestCase, TestResult, RunMetadata
-│   ├── loader.py          # YAML test discovery and deserialization
-│   ├── results.py         # Results directory management, JSON output
-│   └── metrics.py         # Tokens/sec calculation
-├── tests/                 # YAML test cases (auto-discovered recursively)
-│   ├── go/
-│   ├── python/
-│   └── theory/
-└── results/               # Output (gitignored)
-```
+| Package          | Purpose                              |
+| ---------------- | ------------------------------------ |
+| `fastapi`        | Web framework                        |
+| `uvicorn`        | ASGI server                          |
+| `jinja2`         | Template engine                      |
+| `openai`         | LLM API client (all providers)       |
+| `httpx`          | Async HTTP for Ollama management API |
+| `pyyaml`         | YAML test case parsing               |
+| `python-dotenv`  | `.env` file loading                  |
+| `python-multipart`| Form data handling                  |
