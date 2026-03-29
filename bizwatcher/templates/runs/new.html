@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}New Run — bizantine-watcher{% endblock %}
+{% block content %}
+<div class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+  <a href="/" class="hover:underline text-blue-600 dark:text-blue-400">Dashboard</a> /
+  <span class="font-semibold text-gray-700 dark:text-gray-200">New Run</span>
+</div>
+
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 max-w-3xl">
+  <h1 class="text-xl font-bold mb-6">Configure Benchmark Run</h1>
+
+  <!-- Provider selector -->
+  <div class="mb-5">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Provider</label>
+    <div class="flex gap-2">
+      <button type="button" onclick="selectProvider('ollama')" id="btn-ollama"
+              class="provider-btn px-4 py-2 rounded-md text-sm font-medium border transition-colors">
+        Ollama
+      </button>
+      <button type="button" onclick="selectProvider('openai')" id="btn-openai"
+              class="provider-btn px-4 py-2 rounded-md text-sm font-medium border transition-colors">
+        OpenAI
+      </button>
+      <button type="button" onclick="selectProvider('gemini')" id="btn-gemini"
+              class="provider-btn px-4 py-2 rounded-md text-sm font-medium border transition-colors">
+        Gemini
+      </button>
+    </div>
+  </div>
+
+  <!-- Ollama-specific fields -->
+  <div id="ollama-fields">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model Name *</label>
+        <input id="run-model" type="text" placeholder="e.g. llama3:8b"
+               class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ollama URL</label>
+        <input id="run-api-url" type="text" value="{{ ollama_url }}/v1"
+               class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenAI / Gemini fields -->
+  <div id="cloud-fields" class="hidden">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model Name *</label>
+        <input id="run-cloud-model" type="text" placeholder="e.g. gpt-4o, gemini-2.5-flash"
+               class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API Key *</label>
+        <input id="run-api-key" type="password" placeholder="sk-... or AIza..."
+               class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Not stored — only used for this run.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Common parameters -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Temperature</label>
+      <input id="run-temperature" type="number" value="0.1" min="0" max="2" step="0.1"
+             class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Tokens</label>
+      <input id="run-max-tokens" type="number" value="2048" min="100" max="32768" step="256"
+             class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+    </div>
+    <div class="flex items-end">
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 pb-1.5">
+        <input id="run-think" type="checkbox" class="rounded border-gray-300 dark:border-gray-600">
+        Enable Thinking
+      </label>
+    </div>
+  </div>
+
+  <!-- Tags -->
+  {% if all_tags %}
+  <div class="mb-5">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Tags (optional)</label>
+    <div class="flex flex-wrap gap-2">
+      {% for tag in all_tags %}
+      <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-xs cursor-pointer hover:border-blue-400">
+        <input type="checkbox" class="tag-checkbox rounded border-gray-300 dark:border-gray-600" value="{{ tag }}">
+        {{ tag }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- System prompt -->
+  <div class="mb-6">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">System Prompt</label>
+    <textarea id="run-system-prompt" rows="3"
+              class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">{{ default_system_prompt }}</textarea>
+  </div>
+
+  <!-- Submit -->
+  <div class="flex items-center gap-3">
+    <button onclick="startRun()" id="start-btn"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-md transition-colors">
+      Start Run
+    </button>
+    <span id="start-error" class="text-red-500 text-sm hidden"></span>
+  </div>
+</div>
+
+<script>
+let currentProvider = 'ollama';
+
+function selectProvider(provider) {
+  currentProvider = provider;
+  document.querySelectorAll('.provider-btn').forEach(btn => {
+    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+    btn.classList.add('border-gray-300', 'dark:border-gray-600', 'text-gray-600', 'dark:text-gray-400');
+  });
+  const active = document.getElementById('btn-' + provider);
+  active.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+  active.classList.remove('border-gray-300', 'dark:border-gray-600', 'text-gray-600', 'dark:text-gray-400');
+
+  document.getElementById('ollama-fields').classList.toggle('hidden', provider !== 'ollama');
+  document.getElementById('cloud-fields').classList.toggle('hidden', provider === 'ollama');
+}
+
+function startRun() {
+  const errorEl = document.getElementById('start-error');
+  errorEl.classList.add('hidden');
+
+  let model, api_key = '', api_url = '';
+  if (currentProvider === 'ollama') {
+    model = document.getElementById('run-model').value.trim();
+    api_url = document.getElementById('run-api-url').value.trim();
+  } else {
+    model = document.getElementById('run-cloud-model').value.trim();
+    api_key = document.getElementById('run-api-key').value.trim();
+  }
+
+  if (!model) {
+    errorEl.textContent = 'Model name is required';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  const tags = [];
+  document.querySelectorAll('.tag-checkbox:checked').forEach(cb => tags.push(cb.value));
+
+  const payload = {
+    provider: currentProvider,
+    model: model,
+    api_key: api_key,
+    api_url: api_url,
+    temperature: parseFloat(document.getElementById('run-temperature').value),
+    max_tokens: parseInt(document.getElementById('run-max-tokens').value),
+    think: document.getElementById('run-think').checked,
+    tags: tags,
+    system_prompt: document.getElementById('run-system-prompt').value,
+  };
+
+  const btn = document.getElementById('start-btn');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+
+  fetch('/api/runs', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      errorEl.textContent = data.error;
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Start Run';
+      return;
+    }
+    window.location.href = '/runs/progress/' + data.task_id;
+  })
+  .catch(err => {
+    errorEl.textContent = 'Request failed: ' + err.message;
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Start Run';
+  });
+}
+
+// Initialize
+selectProvider('ollama');
+</script>
+{% endblock %}
