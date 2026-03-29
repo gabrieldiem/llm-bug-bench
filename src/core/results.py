@@ -69,7 +69,12 @@ def load_metadata(run_dir: Path) -> RunMetadata:
     """Load run metadata from JSON."""
     path = run_dir / "metadata.json"
     with open(path) as f:
-        return RunMetadata(**json.load(f))
+        data = json.load(f)
+        valid_fields = {
+            field.name for field in RunMetadata.__dataclass_fields__.values()
+        }
+        data = {k: v for k, v in data.items() if k in valid_fields}
+        return RunMetadata(**data)
 
 
 def load_all_results(run_dir: Path) -> list[TestResult]:

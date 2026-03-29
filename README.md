@@ -239,7 +239,6 @@ Results are stored as JSON files in `results/<model_name>/run_NNN/`.
   "api_url": "http://localhost:11434/v1",
   "timestamp": "2025-03-26T10:30:00+00:00",
   "temperature": 0.1,
-  "max_tokens": 2048,
   "total_tests": 12,
   "total_elapsed_seconds": 58.4,
   "avg_tokens_per_second": 72.3,

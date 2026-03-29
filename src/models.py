@@ -45,7 +45,6 @@ class RunMetadata:
     api_url: str
     timestamp: str
     temperature: float
-    max_tokens: int
     total_tests: int
     total_elapsed_seconds: float
     avg_tokens_per_second: float | None
@@ -102,7 +101,6 @@ class RunConfig:
 
     provider_config: ProviderConfig
     temperature: float = 0.1
-    max_tokens: int = 2048
     system_prompt: str = ""
     think: bool = False
     benchmarks_dir: str = "./benchmarks"

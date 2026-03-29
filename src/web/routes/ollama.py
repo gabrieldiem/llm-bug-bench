@@ -49,6 +49,18 @@ async def handle_models_page(
     )
 
 
+@router.get("/api/ollama/models/json")
+async def api_list_models_json(
+    manager: OllamaManager = Depends(_get_manager),
+):
+    """Return a JSON array of available Ollama model names."""
+    try:
+        models = await manager.list_models()
+        return JSONResponse([m.name for m in models])
+    except OllamaConnectionError:
+        return JSONResponse([])
+
+
 @router.get("/api/ollama/models", response_class=HTMLResponse)
 async def api_list_models(
     request: Request,

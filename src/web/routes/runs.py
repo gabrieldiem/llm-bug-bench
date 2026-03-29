@@ -204,7 +204,6 @@ async def api_start_run(
             model=model,
         ),
         temperature=float(body.get("temperature", 0.1)),
-        max_tokens=int(body.get("max_tokens", 2048)),
         system_prompt=body.get("system_prompt", ""),
         think=bool(body.get("think", False)),
         benchmarks_dir=benchmarks_dir,

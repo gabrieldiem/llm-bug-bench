@@ -72,7 +72,6 @@ def sample_run(tmp_dirs):
         "api_url": "http://localhost:11434/v1",
         "timestamp": "2025-01-01T00:00:00+00:00",
         "temperature": 0.1,
-        "max_tokens": 2048,
         "total_tests": 1,
         "total_elapsed_seconds": 2.5,
         "avg_tokens_per_second": 50.0,

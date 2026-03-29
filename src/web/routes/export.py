@@ -90,7 +90,6 @@ def export_run_markdown(
         f"- **Total elapsed:** {meta.total_elapsed_seconds}s",
         f"- **Avg tok/s:** {meta.avg_tokens_per_second or 'N/A'}",
         f"- **Temperature:** {meta.temperature}",
-        f"- **Max tokens:** {meta.max_tokens}",
         "",
         "| Test ID | Elapsed | tok/s | Score | Error |",
         "|---------|---------|-------|-------|-------|",

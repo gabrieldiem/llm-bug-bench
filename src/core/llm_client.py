@@ -30,14 +30,12 @@ class LLMClient:
         api_url: str,
         model: str,
         temperature: float,
-        max_tokens: int,
         api_key: str = "ollama",
         think: bool = False,
         debug: bool = False,
     ):
         self.model = model
         self.temperature = temperature
-        self.max_tokens = max_tokens
         self.think = think
         self.debug = debug
 
@@ -85,7 +83,6 @@ class LLMClient:
             "think": self.think,
             "options": {
                 "temperature": self.temperature,
-                "num_predict": self.max_tokens,
             },
         }
         url = f"{self._ollama_base}/api/chat"
@@ -147,7 +144,6 @@ class LLMClient:
                 {"role": "user", "content": user_prompt},
             ],
             temperature=self.temperature,
-            max_tokens=self.max_tokens,
             stream=True,
             stream_options={"include_usage": True},
             extra_body={"think": True} if self.think else None,
@@ -182,7 +178,7 @@ def create_client_from_config(config: ProviderConfig, **kwargs) -> LLMClient:
 
     Args:
         config: Provider configuration with provider type, URL, key, and model.
-        **kwargs: Additional args forwarded to LLMClient (temperature, max_tokens, etc.).
+        **kwargs: Additional args forwarded to LLMClient (temperature, etc.).
 
     Returns:
         Configured LLMClient instance.

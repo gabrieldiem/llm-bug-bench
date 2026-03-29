@@ -57,7 +57,6 @@ def run_with_config(
     client = create_client_from_config(
         config.provider_config,
         temperature=config.temperature,
-        max_tokens=config.max_tokens,
         think=config.think,
     )
     tests = load_tests(config.benchmarks_dir)
@@ -173,7 +172,6 @@ def run_with_config(
         api_url=config.provider_config.api_url,
         timestamp=run_start.isoformat(),
         temperature=config.temperature,
-        max_tokens=config.max_tokens,
         total_tests=len(results),
         total_elapsed_seconds=round(total_elapsed, 2),
         avg_tokens_per_second=round(avg_tps, 1) if avg_tps else None,
