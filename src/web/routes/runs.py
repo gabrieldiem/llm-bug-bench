@@ -25,7 +25,7 @@ from ..dependencies import (
     get_ollama_url,
     get_results_dir,
     get_task_manager,
-    get_tests_dir,
+    get_benchmarks_dir,
 )
 from ..task_manager import TaskManager
 
@@ -42,7 +42,7 @@ router = APIRouter()
 @router.get("/runs/new", response_class=HTMLResponse)
 async def handle_new_run_form(
     request: Request,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
     ollama_url: str = Depends(get_ollama_url),
 ):
     """Render the new run configuration form."""
@@ -161,7 +161,7 @@ async def api_start_run(
     request: Request,
     task_manager: TaskManager = Depends(get_task_manager),
     results_dir: str = Depends(get_results_dir),
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
     ollama_url: str = Depends(get_ollama_url),
 ):
     """Start a benchmark run as a background task. Returns task_id for SSE tracking."""
@@ -206,7 +206,7 @@ async def api_start_run(
         max_tokens=int(body.get("max_tokens", 2048)),
         system_prompt=body.get("system_prompt", ""),
         think=bool(body.get("think", False)),
-        tests_dir=tests_dir,
+        benchmarks_dir=benchmarks_dir,
         results_dir=results_dir,
     )
 

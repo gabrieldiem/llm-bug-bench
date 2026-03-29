@@ -50,7 +50,7 @@ Variables (override on the command line):
 | -------------- | ------------ | ------------------------ |
 | `PORT`         | `8080`       | Web server port          |
 | `RESULTS_DIR`  | `./results`  | Results output directory |
-| `TESTS_DIR`    | `./tests`    | YAML test cases directory|
+| `BENCHMARKS_DIR`| `./benchmarks`| YAML benchmark cases directory|
 
 ## Configuration
 
@@ -60,7 +60,7 @@ Variables (override on the command line):
 | ---------------- | -------------------------- | ------------------------------------------ |
 | `PORT`           | `8080`                     | Web server port                            |
 | `RESULTS_DIR`    | `./results`                | Results output directory                   |
-| `TESTS_DIR`      | `./tests`                  | YAML test cases directory                  |
+| `BENCHMARKS_DIR` | `./benchmarks`             | YAML benchmark cases directory             |
 | `OLLAMA_URL`     | `http://localhost:11434`   | Ollama API base URL (overridable in the UI)|
 | `OPENAI_API_KEY` | —                          | Required for LLM judge scoring             |
 
@@ -74,7 +74,7 @@ python -m src [OPTIONS]
 | --------------- | -------------------- | --------------------------- |
 | `--port`        | `8080` / `$PORT`     | Web server port             |
 | `--results-dir` | `./results`          | Results output directory    |
-| `--tests-dir`   | `./tests`            | YAML test cases directory   |
+| `--benchmarks-dir`| `./benchmarks`     | YAML benchmark cases directory|
 | `--debug`       | off                  | Enable debug-level logging  |
 
 ## Web UI Guide
@@ -162,7 +162,7 @@ The suite ships with 12 test cases across three categories:
 
 ### Adding new tests
 
-Create a new `.yaml` file anywhere under `tests/`. It is auto-discovered — no code changes needed.
+Create a new `.yaml` file anywhere under `benchmarks/`. It is auto-discovered — no code changes needed.
 
 ```yaml
 id: unique_test_id        # must be unique across all tests
@@ -292,10 +292,12 @@ src/
 │   ├── tests/
 │   ├── ollama/
 │   └── partials/
-└── tests/                    # YAML test cases (auto-discovered)
-    ├── go/
-    ├── python/
-    └── theory/
+benchmarks/                       # YAML benchmark cases (auto-discovered)
+├── go/
+├── python/
+└── theory/
+tests/                            # Pytest test files
+
 ```
 
 ## Docker
@@ -307,7 +309,7 @@ docker compose up
 
 # Or manually
 docker build -t llm-bug-bench .
-docker run --rm --network host -v $(pwd)/results:/app/results -v $(pwd)/tests:/app/tests llm-bug-bench
+docker run --rm --network host -v $(pwd)/results:/app/results -v $(pwd)/benchmarks:/app/benchmarks llm-bug-bench
 ```
 
 The container starts the web server on port 8080 by default.

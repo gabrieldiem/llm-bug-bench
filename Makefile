@@ -1,6 +1,6 @@
 PORT ?= 8080
 RESULTS_DIR ?= ./results
-TESTS_DIR ?= ./tests
+BENCHMARKS_DIR ?= ./benchmarks
 
 .PHONY: up down clean prod build test results precommit help
 
@@ -25,8 +25,7 @@ build: ## Build production Docker image
 
 test: ## Run tests with coverage via Docker
 	docker build -f Dockerfile.run_test -t llm-bug-bench-test . && \
-	docker run --rm -v ./reports:/app/reports llm-bug-bench-test; \
-	ret=$$?; if [ $$ret -eq 5 ]; then echo "No tests collected (exit 5) — OK"; exit 0; fi; exit $$ret
+	docker run --rm -v ./reports:/app/reports llm-bug-bench-test
 
 results: ## Print summary of all saved runs
 	@find $(RESULTS_DIR) -name "metadata.json" 2>/dev/null \

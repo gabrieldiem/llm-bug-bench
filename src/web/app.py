@@ -18,13 +18,13 @@ _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
 def create_app(
     results_dir: str = "./results",
-    tests_dir: str = "./tests",
+    benchmarks_dir: str = "./benchmarks",
 ) -> FastAPI:
     """Create and configure the FastAPI application.
 
     Args:
         results_dir: Directory for storing benchmark results.
-        tests_dir: Directory containing YAML test case files.
+        benchmarks_dir: Directory containing YAML benchmark case files.
 
     Returns:
         Configured FastAPI app with all routers registered.
@@ -32,7 +32,7 @@ def create_app(
     app = FastAPI(title="llm-bug-bench")
 
     app.state.results_dir = results_dir
-    app.state.tests_dir = tests_dir
+    app.state.benchmarks_dir = benchmarks_dir
     app.state.ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
     app.state.task_manager = TaskManager()
 
@@ -60,9 +60,9 @@ def create_app(
     app.include_router(compare.router)
 
     logger.info(
-        "App created: results_dir=%s tests_dir=%s ollama_url=%s",
+        "App created: results_dir=%s benchmarks_dir=%s ollama_url=%s",
         results_dir,
-        tests_dir,
+        benchmarks_dir,
         app.state.ollama_url,
     )
     return app

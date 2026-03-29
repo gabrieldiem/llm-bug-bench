@@ -105,7 +105,7 @@ class RunConfig:
     max_tokens: int = 2048
     system_prompt: str = ""
     think: bool = False
-    tests_dir: str = "./tests"
+    benchmarks_dir: str = "./benchmarks"
     results_dir: str = "./results"
 
 

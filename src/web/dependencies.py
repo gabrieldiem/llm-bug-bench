@@ -12,9 +12,9 @@ def get_results_dir(request: Request) -> str:
     return request.app.state.results_dir
 
 
-def get_tests_dir(request: Request) -> str:
-    """Return the configured tests directory path."""
-    return request.app.state.tests_dir
+def get_benchmarks_dir(request: Request) -> str:
+    """Return the configured benchmarks directory path."""
+    return request.app.state.benchmarks_dir
 
 
 def get_task_manager(request: Request) -> TaskManager:

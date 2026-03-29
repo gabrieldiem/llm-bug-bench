@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./src:/app/src
-      - ./tests:/app/tests
+      - ./benchmarks:/app/benchmarks
       - ./results:/app/results
     environment:
       - PORT=${PORT:-8080}

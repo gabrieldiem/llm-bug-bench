@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from ...core.judge import DEFAULT_JUDGE_MODEL, judge_run
-from ..dependencies import get_results_dir, get_task_manager, get_tests_dir
+from ..dependencies import get_results_dir, get_task_manager, get_benchmarks_dir
 from ..task_manager import TaskManager
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ async def api_start_judge(
     request: Request,
     task_manager: TaskManager = Depends(get_task_manager),
     results_dir: str = Depends(get_results_dir),
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
 ):
     """Start judging a run as a background task. Returns task_id for SSE tracking."""
     body = {}
@@ -66,7 +66,13 @@ async def api_start_judge(
 
     async def _judge():
         await asyncio.to_thread(
-            judge_run, run_dir, tests_dir, judge_model, api_key, task_id, progress_cb
+            judge_run,
+            run_dir,
+            benchmarks_dir,
+            judge_model,
+            api_key,
+            task_id,
+            progress_cb,
         )
 
     task_manager.submit(task_id, _judge())

@@ -16,7 +16,7 @@ from ...core.loader import (
 )
 from ...exceptions import DuplicateTestIdError, TestNotFoundError
 from ...models import TestCase
-from ..dependencies import get_tests_dir
+from ..dependencies import get_benchmarks_dir
 
 logger = logging.getLogger(__name__)
 
@@ -26,21 +26,21 @@ router = APIRouter()
 @router.get("/tests", response_class=HTMLResponse)
 def handle_test_list(
     request: Request,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
     language: str | None = None,
     difficulty: str | None = None,
     sort: str = "id",
     order: str = "asc",
 ):
     """Render the test case browser with optional filters and sorting."""
-    all_cases = load_tests(tests_dir)
+    all_cases = load_tests(benchmarks_dir)
 
     if language:
         all_cases = [t for t in all_cases if t.language == language]
     if difficulty:
         all_cases = [t for t in all_cases if t.difficulty == difficulty]
 
-    all_tests = load_tests(tests_dir)
+    all_tests = load_tests(benchmarks_dir)
     languages = sorted({t.language for t in all_tests})
     difficulties = sorted({t.difficulty for t in all_tests})
 
@@ -88,11 +88,11 @@ def handle_test_form(request: Request):
 def handle_test_edit(
     test_id: str,
     request: Request,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
 ):
     """Render the test edit form pre-filled with existing data."""
     try:
-        test = load_test_by_id(tests_dir, test_id)
+        test = load_test_by_id(benchmarks_dir, test_id)
     except TestNotFoundError:
         return RedirectResponse("/tests", status_code=302)
 
@@ -107,11 +107,11 @@ def handle_test_edit(
 def handle_test_view(
     test_id: str,
     request: Request,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
 ):
     """Render the read-only test case detail page."""
     try:
-        test = load_test_by_id(tests_dir, test_id)
+        test = load_test_by_id(benchmarks_dir, test_id)
     except TestNotFoundError:
         return RedirectResponse("/tests", status_code=302)
 
@@ -125,7 +125,7 @@ def handle_test_view(
 @router.post("/api/tests", response_class=HTMLResponse)
 def api_create_test(
     request: Request,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
     id: str = Form(...),
     title: str = Form(...),
     language: str = Form(...),
@@ -150,7 +150,7 @@ def api_create_test(
     )
 
     try:
-        save_test(tests_dir, test)
+        save_test(benchmarks_dir, test)
         logger.info("Test created via API: %s", test.id)
     except DuplicateTestIdError as e:
         logger.warning("Test creation failed: %s", e)
@@ -168,7 +168,7 @@ def api_create_test(
 def api_update_test(
     test_id: str,
     request: Request,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
     id: str = Form(...),
     title: str = Form(...),
     language: str = Form(...),
@@ -193,7 +193,7 @@ def api_update_test(
     )
 
     try:
-        update_test(tests_dir, test_id, test)
+        update_test(benchmarks_dir, test_id, test)
         logger.info("Test updated via API: %s", test_id)
     except TestNotFoundError as e:
         logger.warning("Test update failed: %s", e)
@@ -205,11 +205,11 @@ def api_update_test(
 @router.delete("/api/tests/{test_id}")
 def api_delete_test(
     test_id: str,
-    tests_dir: str = Depends(get_tests_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
 ):
     """Delete a test case YAML file."""
     try:
-        delete_test(tests_dir, test_id)
+        delete_test(benchmarks_dir, test_id)
         logger.info("Test deleted via API: %s", test_id)
         return JSONResponse({"ok": True})
     except TestNotFoundError as e:

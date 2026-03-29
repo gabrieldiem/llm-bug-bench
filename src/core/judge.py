@@ -77,7 +77,7 @@ class JudgeClient:
 
 def judge_run(
     run_dir: Path,
-    tests_dir: str,
+    benchmarks_dir: str,
     judge_model: str,
     api_key: str,
     task_id: str,
@@ -87,7 +87,7 @@ def judge_run(
 
     Args:
         run_dir: Path to the run_NNN directory.
-        tests_dir: Path to YAML test cases for expected_issues lookup.
+        benchmarks_dir: Path to YAML benchmark cases for expected_issues lookup.
         judge_model: OpenAI model name to use as judge.
         api_key: OpenAI API key.
         task_id: Background task identifier for progress tracking.
@@ -103,7 +103,7 @@ def judge_run(
         logger.info("No test results found in %s", run_dir)
         return []
 
-    tests = load_tests(tests_dir)
+    tests = load_tests(benchmarks_dir)
     test_index = {t.id: t for t in tests}
     judge_results: list[JudgeResult] = []
 

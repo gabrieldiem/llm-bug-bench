@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./results:/app/results
-      - ./tests:/app/tests
+      - ./benchmarks:/app/benchmarks
     environment:
       - PORT=${PORT:-8080}
       - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}

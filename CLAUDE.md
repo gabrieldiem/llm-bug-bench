@@ -11,10 +11,13 @@
 poetry install
 python -m src                          # default port 8080
 python -m src --port 3000              # custom port
-python -m src --results-dir ./results --tests-dir ./tests
+python -m src --results-dir ./results --benchmarks-dir ./benchmarks
 
 # Make shortcuts
-make serve PORT=8080
+make up         # start dev environment (hot-reload)
+make prod       # start production environment
+make down       # stop all containers
+make test       # run tests with coverage via Docker
 make build      # build Docker image
 make clean      # delete results
 make results    # print summary
@@ -23,9 +26,9 @@ make precommit  # run black formatter, mypy type checking and pylint static chec
 
 If you want to run a bare command run it with the virtual env: "source .venv/bin/activate && cmd"
 
-**CLI args:** `--port` (8080), `--results-dir` (./results), `--tests-dir` (./tests)
+**CLI args:** `--port` (8080), `--results-dir` (./results), `--benchmarks-dir` (./benchmarks)
 
-**Env vars:** `PORT`, `RESULTS_DIR`, `TESTS_DIR`, `OLLAMA_URL` (http://localhost:11434), `OPENAI_API_KEY`
+**Env vars:** `PORT`, `RESULTS_DIR`, `BENCHMARKS_DIR`, `OLLAMA_URL` (http://localhost:11434), `OPENAI_API_KEY`
 
 ## Architecture
 
@@ -43,7 +46,7 @@ __main__.py → web/app.py → web/routes/*.py
 | `core/` | `llm_client.py` | OpenAI SDK wrapper + Ollama native streaming + multi-provider factory |
 | `core/` | `llm_protocol.py` | `LLMClientProtocol` for DI |
 | `core/` | `judge.py` | LLM-based scoring (1-20 rubric) via OpenAI |
-| `core/` | `loader.py` | YAML test discovery + CRUD (save/update/delete) |
+| `core/` | `loader.py` | YAML benchmark discovery + CRUD (save/update/delete) |
 | `core/` | `results.py` | JSON persistence at `results/<model>/run_NNN/` |
 | `core/` | `ollama_manager.py` | Async Ollama REST API (list/pull/delete/show models) |
 | `core/` | `leaderboard.py` | Aggregate scores across runs per model |
@@ -79,11 +82,17 @@ __main__.py → web/app.py → web/routes/*.py
 | `/ollama` | Model management (list/pull/delete) |
 | `/compare` | Side-by-side run comparison |
 
-## Test Cases
+## Benchmark Cases
 
-YAML files in `tests/`, auto-discovered. Fields: `id`, `title`, `language`, `difficulty`, `prompt`, `code` (optional), `expected_issues`, `notes`.
+YAML files in `benchmarks/`, auto-discovered. Fields: `id`, `title`, `language`, `difficulty`, `prompt`, `code` (optional), `expected_issues`, `notes`.
 
-12 tests: 5 Go, 5 Python, 2 theory (CAP, Byzantine faults).
+12 benchmarks: 5 Go, 5 Python, 2 theory (CAP, Byzantine faults).
+
+## Testing
+
+- Tests live in `tests/` (pytest). Run with `make test`.
+- `tests/conftest.py` provides fixtures: `app`, `client`, `sample_benchmark`, `sample_run`.
+- Test endpoints that don't require LLM inference.
 
 ## Dependencies
 
@@ -110,7 +119,7 @@ Python 3.13+, Poetry, `openai`, `pyyaml`, `python-dotenv`, `fastapi`, `uvicorn`,
 - **Abstractions**: Depend on ABC or Protocol. Keep interfaces small.
 - **Composition over inheritance**: Prefer has-a over is-a.
 
-## Testing
+## Testing Guidelines
 
 - Test interfaces, not implementations.
 - Use DI for easy mocking.

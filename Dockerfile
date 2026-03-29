@@ -24,7 +24,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 RUN mkdir -p /app/results
 
 COPY src/ src/
-COPY tests/ tests/
+COPY benchmarks/ benchmarks/
 
 EXPOSE 8080
 

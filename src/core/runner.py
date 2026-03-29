@@ -60,10 +60,10 @@ def run_with_config(
         max_tokens=config.max_tokens,
         think=config.think,
     )
-    tests = load_tests(config.tests_dir)
+    tests = load_tests(config.benchmarks_dir)
 
     if not tests:
-        raise ValueError("No test cases found. Check tests_dir.")
+        raise ValueError("No test cases found. Check benchmarks_dir.")
 
     model = config.provider_config.model
     run_id = get_next_run_id(config.results_dir, model)

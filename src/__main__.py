@@ -39,8 +39,8 @@ def main() -> None:
         help="Directory with run results",
     )
     parser.add_argument(
-        "--tests-dir",
-        default=os.environ.get("TESTS_DIR", "./tests"),
+        "--benchmarks-dir",
+        default=os.environ.get("BENCHMARKS_DIR", "./benchmarks"),
         help="Directory with YAML test cases",
     )
     parser.add_argument(
@@ -75,7 +75,7 @@ def main() -> None:
 
         app = create_app(
             results_dir=args.results_dir,
-            tests_dir=args.tests_dir,
+            benchmarks_dir=args.benchmarks_dir,
         )
         uvicorn.run(app, host="0.0.0.0", port=args.port)
 
