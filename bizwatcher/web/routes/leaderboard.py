@@ -1,3 +1,5 @@
+"""Routes for the sortable model leaderboard."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
@@ -16,6 +18,7 @@ def handle_leaderboard(
     sort: str = "score",
     order: str = "desc",
 ):
+    """Render the full leaderboard page with sortable columns."""
     entries = compute_leaderboard(results_dir)
     entries = sort_leaderboard(entries, sort_by=sort, descending=(order == "desc"))
 
@@ -38,6 +41,7 @@ def api_leaderboard_partial(
     sort: str = "score",
     order: str = "desc",
 ):
+    """Return the leaderboard table as an HTMX partial for in-place sorting."""
     entries = compute_leaderboard(results_dir)
     entries = sort_leaderboard(entries, sort_by=sort, descending=(order == "desc"))
 

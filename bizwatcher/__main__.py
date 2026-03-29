@@ -1,10 +1,26 @@
+"""CLI entry point — starts the FastAPI web server."""
+
 import argparse
+import logging
 import os
 
 from dotenv import load_dotenv
 
 
+def _configure_logging(debug: bool) -> None:
+    """Set up root logger and suppress noisy third-party loggers."""
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    for noisy in ("uvicorn.access", "httpx", "httpcore", "openai"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
 def main() -> None:
+    """Parse CLI args and start the uvicorn server."""
     load_dotenv()
 
     parser = argparse.ArgumentParser(
@@ -27,8 +43,15 @@ def main() -> None:
         default=os.environ.get("TESTS_DIR", "./tests"),
         help="Directory with YAML test cases",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Enable debug logging",
+    )
 
     args = parser.parse_args()
+    _configure_logging(args.debug)
 
     import uvicorn
 

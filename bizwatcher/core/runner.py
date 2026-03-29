@@ -1,5 +1,8 @@
+"""Core benchmark runner — loads tests, queries LLMs, saves results."""
+
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
 
@@ -9,6 +12,8 @@ from .llm_client import create_client_from_config
 from .loader import load_tests
 from .results import create_run_dir, get_next_run_id, save_metadata, save_result
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_SYSTEM_PROMPT = (
     "You are a senior software engineer reviewing code for bugs. "
     "Focus on concurrency issues, error handling, and distributed systems correctness. "
@@ -17,6 +22,7 @@ DEFAULT_SYSTEM_PROMPT = (
 
 
 def build_prompt(test: TestCase) -> str:
+    """Build the user prompt from a test case, appending code if present."""
     if test.code:
         return f"{test.prompt}\n\n```{test.language}\n{test.code}```"
     return test.prompt
@@ -27,7 +33,16 @@ def run_with_config(
     task_id: str,
     progress_cb: Callable[[RunProgress], None] | None = None,
 ) -> RunMetadata:
-    """Execute a benchmark run. Calls progress_cb after each test."""
+    """Execute a benchmark run. Calls progress_cb after each test.
+
+    Args:
+        config: Full run configuration including provider, model, and params.
+        task_id: Unique identifier for background task tracking.
+        progress_cb: Optional callback for SSE progress updates.
+
+    Returns:
+        RunMetadata with aggregate stats for the completed run.
+    """
     client = create_client_from_config(
         config.provider_config,
         temperature=config.temperature,
@@ -43,6 +58,14 @@ def run_with_config(
     run_id = get_next_run_id(config.results_dir, model)
     run_dir = create_run_dir(config.results_dir, model, run_id)
     system_prompt = config.system_prompt or DEFAULT_SYSTEM_PROMPT
+
+    logger.info(
+        "Run started: model=%s run_id=%s tests=%d provider=%s",
+        model,
+        run_id,
+        len(tests),
+        config.provider_config.provider,
+    )
 
     results: list[TestResult] = []
     run_start = datetime.now(timezone.utc)
@@ -64,8 +87,13 @@ def run_with_config(
                 )
             )
 
+        logger.info("[%d/%d] %s: %s", i, len(tests), test.id, test.title)
+
         try:
             user_prompt = build_prompt(test)
+            logger.debug(
+                "Prompt length: system=%d user=%d", len(system_prompt), len(user_prompt)
+            )
             response, usage, elapsed = client.query(system_prompt, user_prompt)
             tps = compute_tokens_per_second(usage, elapsed)
 
@@ -87,6 +115,10 @@ def run_with_config(
                 tokens_per_second=round(tps, 1) if tps else None,
                 timestamp=timestamp,
             )
+
+            tps_str = f" {tps:.1f} tok/s" if tps else ""
+            logger.info("%s completed: %.1fs%s", test.id, elapsed, tps_str)
+
         except Exception as e:
             result = TestResult(
                 test_id=test.id,
@@ -101,6 +133,7 @@ def run_with_config(
                 timestamp=timestamp,
                 error=str(e),
             )
+            logger.warning("%s failed: %s", test.id, e)
 
         save_result(run_dir, result)
         results.append(result)
@@ -125,6 +158,14 @@ def run_with_config(
         think=config.think,
     )
     save_metadata(run_dir, metadata)
+
+    logger.info(
+        "Run completed: %d tests in %.1fs, avg_tps=%s, output=%s",
+        len(results),
+        total_elapsed,
+        avg_tps,
+        run_dir,
+    )
 
     if progress_cb:
         progress_cb(

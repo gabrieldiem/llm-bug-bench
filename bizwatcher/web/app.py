@@ -1,5 +1,8 @@
+"""FastAPI application factory and router registration."""
+
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
@@ -8,6 +11,8 @@ from fastapi.templating import Jinja2Templates
 
 from .task_manager import TaskManager
 
+logger = logging.getLogger(__name__)
+
 _TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
 
@@ -15,6 +20,15 @@ def create_app(
     results_dir: str = "./results",
     tests_dir: str = "./tests",
 ) -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    Args:
+        results_dir: Directory for storing benchmark results.
+        tests_dir: Directory containing YAML test case files.
+
+    Returns:
+        Configured FastAPI app with all routers registered.
+    """
     app = FastAPI(title="bizantine-watcher")
 
     app.state.results_dir = results_dir
@@ -45,4 +59,10 @@ def create_app(
     app.include_router(export.router)
     app.include_router(compare.router)
 
+    logger.info(
+        "App created: results_dir=%s tests_dir=%s ollama_url=%s",
+        results_dir,
+        tests_dir,
+        app.state.ollama_url,
+    )
     return app

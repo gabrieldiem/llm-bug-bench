@@ -1,4 +1,8 @@
+"""Routes for test case CRUD — list, view, create, update, delete."""
+
 from __future__ import annotations
+
+import logging
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -15,6 +19,8 @@ from ...exceptions import DuplicateTestIdError, TestNotFoundError
 from ...models import TestCase
 from ..dependencies import get_tests_dir
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -26,6 +32,7 @@ def handle_test_list(
     tag: str | None = None,
     difficulty: str | None = None,
 ):
+    """Render the test case browser with optional filters."""
     tags_filter = [tag] if tag else None
     all_cases = load_tests(tests_dir, tags=tags_filter)
 
@@ -56,6 +63,7 @@ def handle_test_list(
 
 @router.get("/tests/new", response_class=HTMLResponse)
 def handle_test_form(request: Request):
+    """Render the empty test creation form."""
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "tests/form.html",
@@ -69,6 +77,7 @@ def handle_test_edit(
     request: Request,
     tests_dir: str = Depends(get_tests_dir),
 ):
+    """Render the test edit form pre-filled with existing data."""
     try:
         test = load_test_by_id(tests_dir, test_id)
     except TestNotFoundError:
@@ -87,6 +96,7 @@ def handle_test_view(
     request: Request,
     tests_dir: str = Depends(get_tests_dir),
 ):
+    """Render the read-only test case detail page."""
     try:
         test = load_test_by_id(tests_dir, test_id)
     except TestNotFoundError:
@@ -113,6 +123,7 @@ def api_create_test(
     expected_issues: str = Form(""),
     notes: str = Form(""),
 ):
+    """Create a new test case from form data."""
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     issues_list = [i.strip() for i in expected_issues.split("\n") if i.strip()]
 
@@ -130,7 +141,9 @@ def api_create_test(
 
     try:
         save_test(tests_dir, test)
+        logger.info("Test created via API: %s", test.id)
     except DuplicateTestIdError as e:
+        logger.warning("Test creation failed: %s", e)
         templates = request.app.state.templates
         return templates.TemplateResponse(
             "tests/form.html",
@@ -156,6 +169,7 @@ def api_update_test(
     expected_issues: str = Form(""),
     notes: str = Form(""),
 ):
+    """Update an existing test case from form data."""
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     issues_list = [i.strip() for i in expected_issues.split("\n") if i.strip()]
 
@@ -173,7 +187,9 @@ def api_update_test(
 
     try:
         update_test(tests_dir, test_id, test)
+        logger.info("Test updated via API: %s", test_id)
     except TestNotFoundError as e:
+        logger.warning("Test update failed: %s", e)
         return JSONResponse({"error": str(e)}, status_code=404)
 
     return RedirectResponse(f"/tests/{test.id}", status_code=303)
@@ -184,8 +200,11 @@ def api_delete_test(
     test_id: str,
     tests_dir: str = Depends(get_tests_dir),
 ):
+    """Delete a test case YAML file."""
     try:
         delete_test(tests_dir, test_id)
+        logger.info("Test deleted via API: %s", test_id)
         return JSONResponse({"ok": True})
     except TestNotFoundError as e:
+        logger.warning("Test delete failed: %s", e)
         return JSONResponse({"error": str(e)}, status_code=404)

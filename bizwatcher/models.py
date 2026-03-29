@@ -1,3 +1,5 @@
+"""Data models — frozen dataclasses for test cases, results, and configuration."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -5,6 +7,8 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True, slots=True)
 class TestCase:
+    """A single bug-detection test case loaded from YAML."""
+
     id: str
     title: str
     language: str
@@ -18,6 +22,8 @@ class TestCase:
 
 @dataclass(frozen=True, slots=True)
 class TestResult:
+    """Result of running a single test case against an LLM."""
+
     test_id: str
     model: str
     prompt_sent: str
@@ -33,6 +39,8 @@ class TestResult:
 
 @dataclass(frozen=True, slots=True)
 class RunMetadata:
+    """Aggregate metadata for a complete benchmark run."""
+
     run_id: str
     model: str
     api_url: str
@@ -50,6 +58,8 @@ class RunMetadata:
 
 @dataclass(frozen=True, slots=True)
 class JudgeResult:
+    """Evaluation of a single test result by the LLM judge."""
+
     test_id: str
     judge_model: str
     score: int
@@ -67,6 +77,8 @@ class JudgeResult:
 
 @dataclass(frozen=True, slots=True)
 class OllamaModel:
+    """An LLM model available in a local Ollama instance."""
+
     name: str
     size: int
     parameter_size: str
@@ -77,6 +89,8 @@ class OllamaModel:
 
 @dataclass(frozen=True, slots=True)
 class ProviderConfig:
+    """Connection details for an LLM provider (Ollama, OpenAI, or Gemini)."""
+
     provider: str
     api_url: str
     api_key: str
@@ -85,6 +99,8 @@ class ProviderConfig:
 
 @dataclass(frozen=True, slots=True)
 class RunConfig:
+    """All parameters needed to start a benchmark run."""
+
     provider_config: ProviderConfig
     temperature: float = 0.1
     max_tokens: int = 2048
@@ -97,6 +113,8 @@ class RunConfig:
 
 @dataclass(frozen=True, slots=True)
 class RunProgress:
+    """Progress update emitted during a benchmark run for SSE streaming."""
+
     run_id: str
     task_id: str
     status: str
@@ -110,6 +128,8 @@ class RunProgress:
 
 @dataclass(frozen=True, slots=True)
 class LeaderboardEntry:
+    """Aggregated benchmark data for one model across all its runs."""
+
     model: str
     provider: str
     parameter_size: str

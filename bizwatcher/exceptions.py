@@ -1,29 +1,31 @@
+"""Domain exceptions for the bizantine-watcher application."""
+
 from __future__ import annotations
 
 
 class BizWatcherError(Exception):
-    pass
+    """Base exception for all bizantine-watcher errors."""
 
 
 class TestNotFoundError(BizWatcherError):
-    pass
+    """Raised when a test case ID cannot be found."""
 
 
 class RunNotFoundError(BizWatcherError):
-    pass
+    """Raised when a run directory cannot be found."""
 
 
 class ProviderError(BizWatcherError):
-    pass
+    """Raised for LLM provider configuration errors."""
 
 
 class OllamaConnectionError(ProviderError):
-    pass
+    """Raised when the Ollama API is unreachable."""
 
 
 class JudgeParseError(BizWatcherError):
-    pass
+    """Raised when the judge response cannot be parsed as JSON."""
 
 
 class DuplicateTestIdError(BizWatcherError):
-    pass
+    """Raised when creating a test case with an ID that already exists."""

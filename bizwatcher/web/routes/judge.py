@@ -1,7 +1,10 @@
+"""Routes for triggering LLM judge scoring with background execution and SSE progress."""
+
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from dataclasses import asdict
 from pathlib import Path
@@ -12,6 +15,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from ...core.judge import DEFAULT_JUDGE_MODEL, judge_run
 from ..dependencies import get_results_dir, get_task_manager, get_tests_dir
 from ..task_manager import TaskManager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -25,6 +30,7 @@ async def api_start_judge(
     results_dir: str = Depends(get_results_dir),
     tests_dir: str = Depends(get_tests_dir),
 ):
+    """Start judging a run as a background task. Returns task_id for SSE tracking."""
     body = {}
     try:
         body = await request.json()
@@ -35,6 +41,7 @@ async def api_start_judge(
     judge_model = body.get("judge_model", "") or DEFAULT_JUDGE_MODEL
 
     if not api_key:
+        logger.warning("Judge rejected: OPENAI_API_KEY not set")
         return JSONResponse(
             {
                 "error": "OPENAI_API_KEY not set. Provide api_key in request or set the env var."
@@ -48,6 +55,14 @@ async def api_start_judge(
 
     task_id = task_manager.create_task_id()
     progress_cb = task_manager.make_progress_callback(task_id)
+
+    logger.info(
+        "Judge started via API: %s/%s model=%s task_id=%s",
+        model_slug,
+        run_id,
+        judge_model,
+        task_id,
+    )
 
     async def _judge():
         await asyncio.to_thread(
@@ -64,6 +79,7 @@ async def api_judge_progress(
     task_id: str,
     task_manager: TaskManager = Depends(get_task_manager),
 ):
+    """Stream judge progress events via SSE."""
     entry = task_manager.get_entry(task_id)
     if not entry:
         return JSONResponse({"error": "Task not found"}, status_code=404)

@@ -1,13 +1,25 @@
+"""Aggregate benchmark scores across runs to build a per-model leaderboard."""
+
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from ..models import LeaderboardEntry
 from .results import load_all_judge_results, load_metadata
 
+logger = logging.getLogger(__name__)
+
 
 def compute_leaderboard(results_dir: str) -> list[LeaderboardEntry]:
-    """Scan all runs and aggregate into one LeaderboardEntry per model."""
+    """Scan all runs and aggregate into one LeaderboardEntry per model.
+
+    Args:
+        results_dir: Root results directory containing model subdirectories.
+
+    Returns:
+        List of LeaderboardEntry, one per unique model.
+    """
     results_path = Path(results_dir)
     if not results_path.exists():
         return []
@@ -78,6 +90,11 @@ def compute_leaderboard(results_dir: str) -> list[LeaderboardEntry]:
             )
         )
 
+    logger.debug(
+        "Leaderboard computed: %d model(s) across %d run(s)",
+        len(entries),
+        sum(len(d["runs"]) for d in model_data.values()),
+    )
     return entries
 
 
@@ -86,7 +103,16 @@ def sort_leaderboard(
     sort_by: str = "score",
     descending: bool = True,
 ) -> list[LeaderboardEntry]:
-    """Sort leaderboard entries by the given column."""
+    """Sort leaderboard entries by the given column.
+
+    Args:
+        entries: List of LeaderboardEntry to sort.
+        sort_by: Column name — one of "score", "speed", "runs", "model".
+        descending: Sort direction (True = highest first).
+
+    Returns:
+        Sorted copy of the entries list.
+    """
     key_map = {
         "score": lambda e: e.best_avg_score or 0,
         "speed": lambda e: e.avg_tokens_per_second or 0,

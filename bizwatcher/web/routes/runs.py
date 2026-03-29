@@ -1,7 +1,10 @@
+"""Routes for benchmark runs — new run form, execution, progress SSE, and detail views."""
+
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from dataclasses import asdict
 from pathlib import Path
 
@@ -27,6 +30,8 @@ from ..dependencies import (
 )
 from ..task_manager import TaskManager
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -41,6 +46,7 @@ async def handle_new_run_form(
     tests_dir: str = Depends(get_tests_dir),
     ollama_url: str = Depends(get_ollama_url),
 ):
+    """Render the new run configuration form."""
     all_tags = get_all_tags(tests_dir)
     templates = request.app.state.templates
     return templates.TemplateResponse(
@@ -59,6 +65,7 @@ async def handle_run_progress_page(
     task_id: str,
     request: Request,
 ):
+    """Render the run progress tracking page."""
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "runs/progress.html",
@@ -73,6 +80,7 @@ def handle_run_detail(
     request: Request,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Render the run detail page with per-test results and scores."""
     run_dir = Path(results_dir) / model_slug / run_id
     meta = load_metadata(run_dir)
     results = load_all_results(run_dir)
@@ -112,6 +120,7 @@ def handle_test_detail(
     request: Request,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Render the test detail page with prompt, response, and judge evaluation."""
     run_dir = Path(results_dir) / model_slug / run_id
     result = load_result(run_dir, test_id)
     jr = load_judge_result(run_dir, test_id)
@@ -141,6 +150,7 @@ async def api_start_run(
     tests_dir: str = Depends(get_tests_dir),
     ollama_url: str = Depends(get_ollama_url),
 ):
+    """Start a benchmark run as a background task. Returns task_id for SSE tracking."""
     body = await request.json()
 
     provider = body.get("provider", "ollama")
@@ -149,6 +159,7 @@ async def api_start_run(
     api_url = body.get("api_url", "")
 
     if not model:
+        logger.warning("Run rejected: model name is required")
         return JSONResponse({"error": "Model name is required"}, status_code=400)
 
     if provider == "ollama":
@@ -156,12 +167,14 @@ async def api_start_run(
     elif provider == "openai":
         api_url = "https://api.openai.com/v1"
         if not api_key:
+            logger.warning("Run rejected: OpenAI API key required")
             return JSONResponse(
                 {"error": "API key is required for OpenAI"}, status_code=400
             )
     elif provider == "gemini":
         api_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
         if not api_key:
+            logger.warning("Run rejected: Gemini API key required")
             return JSONResponse(
                 {"error": "API key is required for Gemini"}, status_code=400
             )
@@ -190,6 +203,13 @@ async def api_start_run(
     task_id = task_manager.create_task_id()
     progress_cb = task_manager.make_progress_callback(task_id)
 
+    logger.info(
+        "Run started via API: model=%s provider=%s task_id=%s",
+        model,
+        provider,
+        task_id,
+    )
+
     async def _run():
         await asyncio.to_thread(run_with_config, config, task_id, progress_cb)
 
@@ -203,6 +223,7 @@ async def api_run_progress(
     task_id: str,
     task_manager: TaskManager = Depends(get_task_manager),
 ):
+    """Stream run progress events via SSE."""
     entry = task_manager.get_entry(task_id)
     if not entry:
         return JSONResponse({"error": "Task not found"}, status_code=404)
@@ -239,8 +260,10 @@ def api_delete_run(
     run_id: str,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Delete a run directory and all its contents."""
     run_dir = Path(results_dir) / model_slug / run_id
     if not run_dir.exists():
         return JSONResponse({"error": "Run not found"}, status_code=404)
     delete_run(run_dir)
+    logger.info("Run deleted via API: %s/%s", model_slug, run_id)
     return JSONResponse({"ok": True})

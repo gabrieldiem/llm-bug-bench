@@ -1,7 +1,9 @@
+"""OpenAI-compatible LLM client with Ollama native streaming and multi-provider factory."""
+
 from __future__ import annotations
 
 import json as _json
-import sys
+import logging
 import time
 import urllib.request
 
@@ -10,11 +12,18 @@ import openai
 from ..exceptions import ProviderError
 from ..models import ProviderConfig
 
+logger = logging.getLogger(__name__)
+
 GEMINI_OPENAI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 
 class LLMClient:
-    """OpenAI-compatible LLM client with Ollama native streaming support."""
+    """OpenAI-compatible LLM client with Ollama native streaming support.
+
+    Detects Ollama endpoints (URLs ending in /v1 with api_key="ollama") and
+    uses the native /api/chat endpoint for first-class thinking support.
+    All other endpoints use the OpenAI SDK.
+    """
 
     def __init__(
         self,
@@ -35,14 +44,29 @@ class LLMClient:
         base = api_url.rstrip("/")
         if base.endswith("/v1") and api_key == "ollama":
             self._ollama_base: str | None = base[:-3]
+            logger.info(
+                "LLMClient created: Ollama native mode, model=%s, url=%s", model, base
+            )
         else:
             self._ollama_base = None
             self._openai_client = openai.OpenAI(base_url=api_url, api_key=api_key)
+            logger.info(
+                "LLMClient created: OpenAI SDK mode, model=%s, url=%s", model, api_url
+            )
 
     def query(self, system_prompt: str, user_prompt: str) -> tuple[str, object, float]:
-        """Returns (response_text, usage_object, elapsed_seconds)."""
+        """Send a chat completion request and return the response.
+
+        Returns:
+            Tuple of (response_text, usage_object, elapsed_seconds).
+        """
         if not self.think:
             user_prompt = user_prompt + "\n/no_think"
+        logger.debug(
+            "Query: system=%d chars, user=%d chars",
+            len(system_prompt),
+            len(user_prompt),
+        )
         if self._ollama_base is not None:
             return self._query_ollama_native(system_prompt, user_prompt)
         return self._query_openai(system_prompt, user_prompt)
@@ -50,6 +74,7 @@ class LLMClient:
     def _query_ollama_native(
         self, system_prompt: str, user_prompt: str
     ) -> tuple[str, object, float]:
+        """Call Ollama's native /api/chat with streaming."""
         payload = {
             "model": self.model,
             "messages": [
@@ -80,7 +105,7 @@ class LLMClient:
                     continue
                 obj = _json.loads(line)
                 if self.debug:
-                    print(repr(obj), file=sys.stderr)
+                    logger.debug("Ollama chunk: %r", obj)
                 msg = obj.get("message", {})
                 if msg.get("thinking"):
                     reasoning_parts.append(msg["thinking"])
@@ -100,11 +125,20 @@ class LLMClient:
         usage.prompt_tokens = prompt_tokens  # type: ignore[attr-defined]
         usage.completion_tokens = completion_tokens  # type: ignore[attr-defined]
         usage.total_tokens = total_tokens  # type: ignore[attr-defined]
+
+        logger.debug(
+            "Ollama response: %d chars, prompt_tok=%s, completion_tok=%s, %.1fs",
+            len(text),
+            prompt_tokens,
+            completion_tokens,
+            elapsed,
+        )
         return text, usage, elapsed
 
     def _query_openai(
         self, system_prompt: str, user_prompt: str
     ) -> tuple[str, object, float]:
+        """Call any OpenAI-compatible endpoint via the OpenAI SDK with streaming."""
         start = time.monotonic()
         stream = self._openai_client.chat.completions.create(
             model=self.model,
@@ -123,7 +157,7 @@ class LLMClient:
         usage = None
         for chunk in stream:
             if self.debug:
-                print(repr(chunk), file=sys.stderr)
+                logger.debug("OpenAI chunk: %r", chunk)
             if chunk.choices:
                 delta = chunk.choices[0].delta
                 if delta.content:
@@ -135,11 +169,27 @@ class LLMClient:
                 usage = chunk.usage
         elapsed = time.monotonic() - start
         text = "".join(content_parts) or "".join(reasoning_parts)
+
+        if usage is None:
+            logger.warning("No usage data returned from API")
+
+        logger.debug("OpenAI response: %d chars, %.1fs", len(text), elapsed)
         return text, usage, elapsed
 
 
 def create_client_from_config(config: ProviderConfig, **kwargs) -> LLMClient:
-    """Factory: build an LLMClient from a ProviderConfig."""
+    """Build an LLMClient from a ProviderConfig.
+
+    Args:
+        config: Provider configuration with provider type, URL, key, and model.
+        **kwargs: Additional args forwarded to LLMClient (temperature, max_tokens, etc.).
+
+    Returns:
+        Configured LLMClient instance.
+
+    Raises:
+        ProviderError: If the provider type is not recognized.
+    """
     if config.provider == "ollama":
         return LLMClient(
             api_url=config.api_url,

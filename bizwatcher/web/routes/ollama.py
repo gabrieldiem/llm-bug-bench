@@ -1,6 +1,9 @@
+"""Routes for Ollama model management — list, pull, delete, and URL configuration."""
+
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -9,10 +12,13 @@ from ...core.ollama_manager import OllamaManager
 from ...exceptions import OllamaConnectionError
 from ..dependencies import get_ollama_url
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
 def _get_manager(ollama_url: str = Depends(get_ollama_url)) -> OllamaManager:
+    """Build an OllamaManager from the current Ollama URL."""
     return OllamaManager(base_url=ollama_url)
 
 
@@ -21,6 +27,7 @@ async def handle_models_page(
     request: Request,
     manager: OllamaManager = Depends(_get_manager),
 ):
+    """Render the Ollama model management page."""
     templates = request.app.state.templates
     ollama_url = request.app.state.ollama_url
     try:
@@ -29,6 +36,7 @@ async def handle_models_page(
     except OllamaConnectionError as e:
         models = []
         error = str(e)
+        logger.warning("Ollama connection failed: %s", e)
 
     return templates.TemplateResponse(
         "ollama/models.html",
@@ -46,6 +54,7 @@ async def api_list_models(
     request: Request,
     manager: OllamaManager = Depends(_get_manager),
 ):
+    """Return an HTMX partial with the model card grid."""
     templates = request.app.state.templates
     try:
         models = await manager.list_models()
@@ -65,10 +74,13 @@ async def api_pull_model(
     request: Request,
     manager: OllamaManager = Depends(_get_manager),
 ):
+    """Pull a model from the Ollama registry with SSE progress streaming."""
     body = await request.json()
     name = body.get("name", "")
     if not name:
         return JSONResponse({"error": "Model name required"}, status_code=400)
+
+    logger.info("Model pull requested: %s", name)
 
     async def _stream():
         try:
@@ -87,6 +99,7 @@ async def api_pull_model(
                 )
                 yield f"data: {data}\n\n"
         except OllamaConnectionError as e:
+            logger.warning("Model pull failed: %s", e)
             yield f"data: {json.dumps({'status': 'error', 'error': str(e)})}\n\n"
         yield 'data: {"status": "done"}\n\n'
 
@@ -98,19 +111,23 @@ async def api_delete_model(
     name: str,
     manager: OllamaManager = Depends(_get_manager),
 ):
+    """Delete a model from the local Ollama instance."""
     try:
         await manager.delete_model(name)
+        logger.info("Model deleted: %s", name)
         return JSONResponse({"ok": True})
     except OllamaConnectionError as e:
+        logger.warning("Model delete failed: %s", e)
         return JSONResponse({"error": str(e)}, status_code=502)
 
 
 @router.post("/api/ollama/url")
 async def api_set_ollama_url(request: Request):
-    """Allow the UI to override the Ollama URL for this session."""
+    """Override the Ollama URL for this server session."""
     body = await request.json()
     url = body.get("url", "").strip().rstrip("/")
     if not url:
         return JSONResponse({"error": "URL required"}, status_code=400)
     request.app.state.ollama_url = url
+    logger.info("Ollama URL changed: %s", url)
     return JSONResponse({"ok": True, "url": url})

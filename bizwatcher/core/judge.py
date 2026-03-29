@@ -1,6 +1,9 @@
+"""LLM-based judge that scores bug-detection responses on a 1-20 rubric."""
+
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -12,6 +15,8 @@ from ..exceptions import JudgeParseError
 from ..models import JudgeResult, RunProgress
 from .loader import load_tests
 from .results import load_all_results, load_judge_result, save_judge_result
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_JUDGE_MODEL = "gpt-5.2-chat-latest"
 
@@ -31,6 +36,8 @@ Score on a scale of 1–20:
 
 
 class JudgeClient:
+    """Client for evaluating LLM responses using an OpenAI judge model."""
+
     def __init__(self, model: str, api_key: str):
         self._model = model
         self._client = openai.OpenAI(api_key=api_key)
@@ -41,6 +48,11 @@ class JudgeClient:
         response: str,
         expected_issues: list[str],
     ) -> tuple[dict, int | None, int | None, float]:
+        """Score a single LLM response against expected issues.
+
+        Returns:
+            Tuple of (parsed_json, prompt_tokens, completion_tokens, elapsed_seconds).
+        """
         user_prompt = _build_judge_prompt(prompt_sent, response, expected_issues)
         start = time.monotonic()
         completion = self._client.chat.completions.create(
@@ -71,20 +83,47 @@ def judge_run(
     task_id: str,
     progress_cb: Callable[[RunProgress], None] | None = None,
 ) -> list[JudgeResult]:
-    """Judge all results in a run directory. Returns list of JudgeResults."""
+    """Judge all results in a run directory.
+
+    Args:
+        run_dir: Path to the run_NNN directory.
+        tests_dir: Path to YAML test cases for expected_issues lookup.
+        judge_model: OpenAI model name to use as judge.
+        api_key: OpenAI API key.
+        task_id: Background task identifier for progress tracking.
+        progress_cb: Optional callback for SSE progress updates.
+
+    Returns:
+        List of JudgeResult for all tests in the run.
+    """
     client = JudgeClient(model=judge_model, api_key=api_key)
     results = load_all_results(run_dir)
 
     if not results:
+        logger.info("No test results found in %s", run_dir)
         return []
 
     tests = load_tests(tests_dir)
     test_index = {t.id: t for t in tests}
     judge_results: list[JudgeResult] = []
 
+    logger.info(
+        "Judge started: run_dir=%s model=%s results=%d",
+        run_dir,
+        judge_model,
+        len(results),
+    )
+
     for i, result in enumerate(results, 1):
         existing = load_judge_result(run_dir, result.test_id)
         if existing is not None:
+            logger.info(
+                "[%d/%d] %s: skipped (already judged, score=%d)",
+                i,
+                len(results),
+                result.test_id,
+                existing.score,
+            )
             judge_results.append(existing)
             continue
 
@@ -125,6 +164,14 @@ def judge_run(
                 judge_completion_tokens=completion_tokens,
                 judge_elapsed_seconds=round(elapsed, 2),
             )
+            logger.info(
+                "[%d/%d] %s: score=%d (%.1fs)",
+                i,
+                len(results),
+                result.test_id,
+                score,
+                elapsed,
+            )
         except Exception as e:
             jr = JudgeResult(
                 test_id=result.test_id,
@@ -141,12 +188,18 @@ def judge_run(
                 judge_elapsed_seconds=0.0,
                 error=str(e),
             )
+            logger.warning(
+                "[%d/%d] %s: judge error: %s", i, len(results), result.test_id, e
+            )
 
         save_judge_result(run_dir, jr)
         judge_results.append(jr)
 
+    scores = [jr.score for jr in judge_results]
+    avg_score = sum(scores) / len(scores) if scores else 0
+    logger.info("Judge completed: avg_score=%.1f", avg_score)
+
     if progress_cb:
-        scores = [jr.score for jr in judge_results]
         progress_cb(
             RunProgress(
                 run_id=run_dir.name,
@@ -156,7 +209,7 @@ def judge_run(
                 total_tests=len(results),
                 current_test_id=results[-1].test_id if results else "",
                 elapsed_seconds=0,
-                message=f"Judging complete. Avg score: {sum(scores) / len(scores):.1f}",
+                message=f"Judging complete. Avg score: {avg_score:.1f}",
             )
         )
 
@@ -166,6 +219,7 @@ def judge_run(
 def _build_judge_prompt(
     prompt_sent: str, response: str, expected_issues: list[str]
 ) -> str:
+    """Construct the evaluation prompt for the judge model."""
     numbered = "\n".join(f"{i + 1}. {issue}" for i, issue in enumerate(expected_issues))
     return f"""You are evaluating a bug-detection response from an LLM.
 
@@ -190,6 +244,7 @@ Respond with a JSON object with these fields:
 
 
 def _parse_judge_response(raw: str) -> dict:
+    """Parse the judge's JSON response, stripping markdown code blocks if present."""
     text = raw.strip()
     if text.startswith("```"):
         lines = text.splitlines()

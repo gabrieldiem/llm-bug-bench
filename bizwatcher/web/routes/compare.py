@@ -1,3 +1,5 @@
+"""Routes for side-by-side run comparison."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,6 +22,7 @@ def handle_compare_form(
     request: Request,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Render the run selector form for comparison."""
     results_path = Path(results_dir)
     runs = []
     for meta_path in sorted(results_path.glob("*/run_*/metadata.json")):
@@ -54,6 +57,7 @@ def handle_compare_view(
     request: Request,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Render the side-by-side comparison of two runs with per-test scoring."""
     results_path = Path(results_dir)
 
     dir_a = results_path / slug_a / run_a

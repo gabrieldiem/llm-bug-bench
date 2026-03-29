@@ -1,3 +1,5 @@
+"""Dashboard route — main landing page with all runs and quick stats."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -16,6 +18,7 @@ def handle_dashboard(
     request: Request,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Render the main dashboard with all runs, scores, and summary stats."""
     results_path = Path(results_dir)
     runs = []
     for meta_path in sorted(results_path.glob("*/run_*/metadata.json")):

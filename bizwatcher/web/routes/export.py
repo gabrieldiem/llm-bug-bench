@@ -1,3 +1,5 @@
+"""Routes for exporting run results and leaderboard data as CSV or Markdown."""
+
 from __future__ import annotations
 
 import csv
@@ -20,6 +22,7 @@ def export_run_csv(
     run_id: str,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Download a run's results as a CSV file."""
     run_dir = Path(results_dir) / model_slug / run_id
     meta = load_metadata(run_dir)
     results = load_all_results(run_dir)
@@ -72,6 +75,7 @@ def export_run_markdown(
     run_id: str,
     results_dir: str = Depends(get_results_dir),
 ):
+    """Download a run's results as a Markdown report."""
     run_dir = Path(results_dir) / model_slug / run_id
     meta = load_metadata(run_dir)
     results = load_all_results(run_dir)
@@ -115,6 +119,7 @@ def export_run_markdown(
 def export_leaderboard_csv(
     results_dir: str = Depends(get_results_dir),
 ):
+    """Download the leaderboard as a CSV file."""
     entries = compute_leaderboard(results_dir)
     entries = sort_leaderboard(entries, sort_by="score", descending=True)
 
