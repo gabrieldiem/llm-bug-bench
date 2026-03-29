@@ -17,6 +17,36 @@
   <div><span class="text-gray-500 dark:text-gray-400">Temperature</span><p>{{ meta.temperature }}</p></div>
 </div>
 
+{% if run_tokens or judge_tokens %}
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 mb-6 text-sm">
+  <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Cost Summary</h3>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {% if run_tokens %}
+    <div>
+      <p class="text-gray-500 dark:text-gray-400 font-medium mb-1">Run ({{ meta.model }})</p>
+      <div class="space-y-0.5 text-gray-700 dark:text-gray-300">
+        <div class="flex justify-between"><span>Prompt tokens</span><span class="font-mono">{{ "{:,}".format(run_tokens.prompt) }}</span></div>
+        <div class="flex justify-between"><span>Completion tokens</span><span class="font-mono">{{ "{:,}".format(run_tokens.completion) }}</span></div>
+        <div class="flex justify-between font-semibold border-t border-gray-100 dark:border-gray-700 pt-0.5 mt-0.5"><span>Total</span><span class="font-mono">{{ "{:,}".format(run_tokens.total) }}</span></div>
+        <div class="flex justify-between text-gray-500 dark:text-gray-400"><span>Est. cost</span><span class="font-mono">{% if run_cost is none %}—{% elif run_cost == 0.0 %}$0.00 (local){% else %}${{ "{:.4f}".format(run_cost) }}{% endif %}</span></div>
+      </div>
+    </div>
+    {% endif %}
+    {% if judge_tokens %}
+    <div>
+      <p class="text-gray-500 dark:text-gray-400 font-medium mb-1">Judge ({{ judge_model }})</p>
+      <div class="space-y-0.5 text-gray-700 dark:text-gray-300">
+        <div class="flex justify-between"><span>Prompt tokens</span><span class="font-mono">{{ "{:,}".format(judge_tokens.prompt) }}</span></div>
+        <div class="flex justify-between"><span>Completion tokens</span><span class="font-mono">{{ "{:,}".format(judge_tokens.completion) }}</span></div>
+        <div class="flex justify-between font-semibold border-t border-gray-100 dark:border-gray-700 pt-0.5 mt-0.5"><span>Total</span><span class="font-mono">{{ "{:,}".format(judge_tokens.total) }}</span></div>
+        <div class="flex justify-between text-gray-500 dark:text-gray-400"><span>Est. cost</span><span class="font-mono">{% if judge_cost is none %}—{% else %}${{ "{:.4f}".format(judge_cost) }}{% endif %}</span></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <div class="flex items-center justify-between mb-4">
   <h2 class="text-xl font-bold">Test Results</h2>
   <div class="flex gap-2 items-center" id="run-actions">

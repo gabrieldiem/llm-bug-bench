@@ -19,6 +19,7 @@ from ...core.results import (
     load_metadata,
     load_result,
 )
+from ...core.pricing import estimate_cost
 from ...core.runner import DEFAULT_SYSTEM_PROMPT, run_with_config
 from ...models import ProviderConfig, RunConfig
 from ..dependencies import (
@@ -37,6 +38,33 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # Page routes
 # ---------------------------------------------------------------------------
+
+
+def _aggregate_run_tokens(results: list) -> dict | None:
+    if not any(
+        r.prompt_tokens is not None or r.completion_tokens is not None for r in results
+    ):
+        return None
+    prompt = sum(r.prompt_tokens for r in results if r.prompt_tokens is not None)
+    completion = sum(
+        r.completion_tokens for r in results if r.completion_tokens is not None
+    )
+    return {"prompt": prompt, "completion": completion, "total": prompt + completion}
+
+
+def _aggregate_judge_tokens(judge_results: dict) -> dict | None:
+    if not judge_results:
+        return None
+    jrs = list(judge_results.values())
+    prompt = sum(
+        jr.judge_prompt_tokens for jr in jrs if jr.judge_prompt_tokens is not None
+    )
+    completion = sum(
+        jr.judge_completion_tokens
+        for jr in jrs
+        if jr.judge_completion_tokens is not None
+    )
+    return {"prompt": prompt, "completion": completion, "total": prompt + completion}
 
 
 @router.get("/runs/new", response_class=HTMLResponse)
@@ -84,6 +112,28 @@ def handle_run_detail(
     meta = load_metadata(run_dir)
     results = load_all_results(run_dir)
     judge_results = load_all_judge_results(run_dir)
+
+    run_tokens = _aggregate_run_tokens(results)
+    judge_tokens = _aggregate_judge_tokens(judge_results)
+    judge_model = next((jr.judge_model for jr in judge_results.values()), None)
+
+    run_cost = estimate_cost(
+        meta.provider,
+        meta.model,
+        run_tokens["prompt"] if run_tokens else None,
+        run_tokens["completion"] if run_tokens else None,
+    )
+    judge_cost = (
+        estimate_cost(
+            "openai",
+            judge_model,
+            judge_tokens["prompt"] if judge_tokens else None,
+            judge_tokens["completion"] if judge_tokens else None,
+        )
+        if judge_model
+        else None
+    )
+
     rows = []
     for r in results:
         jr = judge_results.get(r.test_id)
@@ -123,6 +173,11 @@ def handle_run_detail(
             "has_unjudged": any(r["score"] is None for r in rows),
             "sort": sort,
             "order": order,
+            "run_tokens": run_tokens,
+            "judge_tokens": judge_tokens,
+            "run_cost": run_cost,
+            "judge_cost": judge_cost,
+            "judge_model": judge_model,
         },
     )
 
