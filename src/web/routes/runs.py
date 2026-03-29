@@ -20,7 +20,7 @@ from ...core.results import (
     load_result,
 )
 from ...core.pricing import estimate_cost
-from ...core.runner import DEFAULT_SYSTEM_PROMPT, run_with_config
+from ...core.runner import DEFAULT_SYSTEM_PROMPT, run_batch, run_with_config
 from ...models import ProviderConfig, RunConfig
 from ..dependencies import (
     get_ollama_url,
@@ -284,6 +284,47 @@ async def api_start_run(
 
     entry = task_manager.submit(task_id, _run())
     entry.meta["model_slug"] = model
+
+    return JSONResponse({"task_id": task_id})
+
+
+@router.post("/api/runs/batch")
+async def api_start_batch_run(
+    request: Request,
+    task_manager: TaskManager = Depends(get_task_manager),
+    results_dir: str = Depends(get_results_dir),
+    benchmarks_dir: str = Depends(get_benchmarks_dir),
+    ollama_url: str = Depends(get_ollama_url),
+):
+    """Start a batch run against multiple Ollama models sequentially. Returns task_id."""
+    body = await request.json()
+    models = [m.strip() for m in body.get("models", []) if str(m).strip()]
+
+    if not models:
+        return JSONResponse({"error": "At least one model is required"}, status_code=400)
+
+    api_url = body.get("api_url", "") or f"{ollama_url}/v1"
+
+    task_id = task_manager.create_task_id()
+    progress_cb = task_manager.make_progress_callback(task_id)
+
+    logger.info("Batch run started: models=%s task_id=%s", models, task_id)
+
+    async def _run():
+        await asyncio.to_thread(
+            run_batch,
+            models,
+            api_url,
+            float(body.get("temperature", 0.1)),
+            body.get("system_prompt", ""),
+            bool(body.get("think", False)),
+            benchmarks_dir,
+            results_dir,
+            task_id,
+            progress_cb,
+        )
+
+    task_manager.submit(task_id, _run())
 
     return JSONResponse({"task_id": task_id})
 

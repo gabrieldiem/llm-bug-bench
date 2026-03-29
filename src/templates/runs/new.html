@@ -30,18 +30,32 @@
 
   <!-- Ollama-specific fields -->
   <div id="ollama-fields">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <!-- Single model input (shown when batch mode is off) -->
+      <div id="single-model-field">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model Name *</label>
         <input id="run-model" type="text" list="ollama-models" placeholder="e.g. llama3:8b"
                class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
         <datalist id="ollama-models"></datalist>
+      </div>
+      <!-- Batch models textarea (shown when batch mode is on) -->
+      <div id="batch-models-field" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Models (one per line) *</label>
+        <textarea id="run-batch-models" rows="4" placeholder="llama3:8b&#10;mistral:7b&#10;phi3:mini"
+                  class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ollama URL</label>
         <input id="run-api-url" type="text" value="{{ ollama_url }}/v1"
                class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
+    </div>
+    <!-- Batch mode toggle -->
+    <div class="mb-5">
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <input id="batch-mode" type="checkbox" onchange="toggleBatchMode()" class="rounded border-gray-300 dark:border-gray-600">
+        Batch Mode <span class="text-gray-400 dark:text-gray-500 font-normal">(run multiple models sequentially)</span>
+      </label>
     </div>
   </div>
 
@@ -93,6 +107,7 @@
     </button>
     <span id="start-error" class="text-red-500 text-sm hidden"></span>
   </div>
+
 </div>
 
 <script>
@@ -159,11 +174,65 @@ function selectProvider(provider) {
   }
 }
 
+function toggleBatchMode() {
+  const isBatch = document.getElementById('batch-mode').checked;
+  document.getElementById('single-model-field').classList.toggle('hidden', isBatch);
+  document.getElementById('batch-models-field').classList.toggle('hidden', !isBatch);
+  document.getElementById('start-btn').textContent = isBatch ? 'Start Batch Run' : 'Start Run';
+}
+
 function startRun() {
   const errorEl = document.getElementById('start-error');
   errorEl.classList.add('hidden');
 
-  let model, api_key = '', api_url = '';
+  const isBatch = currentProvider === 'ollama' && document.getElementById('batch-mode').checked;
+  let api_key = '', api_url = '';
+
+  if (isBatch) {
+    api_url = document.getElementById('run-api-url').value.trim();
+    const models = document.getElementById('run-batch-models').value
+      .split('\n').map(s => s.trim()).filter(Boolean);
+    if (!models.length) {
+      errorEl.textContent = 'Enter at least one model name';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    const payload = {
+      models: models,
+      api_url: api_url,
+      temperature: parseFloat(document.getElementById('run-temperature').value),
+      think: document.getElementById('run-think').checked,
+      system_prompt: document.getElementById('run-system-prompt').value,
+    };
+    const btn = document.getElementById('start-btn');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    fetch('/api/runs/batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        errorEl.textContent = data.error;
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Start Batch Run';
+        return;
+      }
+      window.location.href = '/runs/progress/' + data.task_id;
+    })
+    .catch(err => {
+      errorEl.textContent = 'Request failed: ' + err.message;
+      errorEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Start Batch Run';
+    });
+    return;
+  }
+
+  let model;
   if (currentProvider === 'ollama') {
     model = document.getElementById('run-model').value.trim();
     api_url = document.getElementById('run-api-url').value.trim();

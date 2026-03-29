@@ -9,7 +9,21 @@
 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-6 max-w-2xl">
   <h1 class="text-xl font-bold mb-4" id="progress-title">Starting run...</h1>
 
-  <!-- Progress bar -->
+  <!-- Batch progress section (hidden for single runs) -->
+  <div id="batch-section" class="hidden mb-5">
+    <div class="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <span id="batch-label">Model 0 of 0</span>
+      <span id="batch-model-name" class="font-mono text-blue-600 dark:text-blue-400"></span>
+    </div>
+    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
+      <div id="batch-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+    </div>
+    <!-- Batch log -->
+    <div id="batch-log" class="space-y-0.5 max-h-32 overflow-y-auto text-sm font-mono mb-2"></div>
+    <hr class="border-gray-200 dark:border-gray-700 mb-4">
+  </div>
+
+  <!-- Per-test progress bar -->
   <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-3">
     <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
   </div>
@@ -31,7 +45,7 @@
   <!-- Completed section -->
   <div id="progress-done" class="hidden">
     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-700 dark:text-green-400 mb-4">
-      Run completed successfully!
+      <span id="done-message">Run completed successfully!</span>
     </div>
     <a id="progress-link" href="/"
        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors inline-block">
@@ -50,11 +64,17 @@
   const msgEl = document.getElementById('progress-message');
   const errorEl = document.getElementById('progress-error');
   const doneEl = document.getElementById('progress-done');
+  const doneMsgEl = document.getElementById('done-message');
   const linkEl = document.getElementById('progress-link');
   const logEl = document.getElementById('test-log');
+  const batchSection = document.getElementById('batch-section');
+  const batchBar = document.getElementById('batch-bar');
+  const batchLabel = document.getElementById('batch-label');
+  const batchModelName = document.getElementById('batch-model-name');
+  const batchLog = document.getElementById('batch-log');
 
   let lastTotal = 0;
-  let currentRow = null; // the in-progress log row
+  let currentRow = null; // the in-progress per-test log row
 
   function createLogRow(testId) {
     const row = document.createElement('div');
@@ -79,6 +99,39 @@
     } else {
       icon.innerHTML = '<span class="text-green-500">\u2713</span>';
     }
+  }
+
+  function addBatchLogRow(modelName, hasError, errorMsg) {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 px-1 py-0.5';
+    const icon = hasError
+      ? '<span class="text-red-500">\u2717</span>'
+      : '<span class="text-green-500">\u2713</span>';
+    const extra = hasError ? ' <span class="text-xs text-red-400 truncate">' + (errorMsg || '') + '</span>' : '';
+    row.innerHTML = icon + '<span class="text-gray-700 dark:text-gray-300">' + modelName + '</span>' + extra;
+    batchLog.appendChild(row);
+    batchLog.scrollTop = batchLog.scrollHeight;
+  }
+
+  function updateBatchProgress(data) {
+    if (data.batch_total == null) return;
+    batchSection.classList.remove('hidden');
+    batchLabel.textContent = 'Model ' + data.batch_current + ' of ' + data.batch_total;
+    batchModelName.textContent = data.batch_model || '';
+    const pct = Math.round((data.batch_current / data.batch_total) * 100);
+    batchBar.style.width = pct + '%';
+  }
+
+  function resetTestProgress() {
+    bar.style.width = '0%';
+    bar.className = 'bg-blue-600 h-3 rounded-full transition-all duration-300';
+    testEl.innerHTML = '<span class="spinner mr-1"></span>Waiting...';
+    countEl.textContent = '0 / 0';
+    logEl.innerHTML = '';
+    currentRow = null;
+    msgEl.textContent = '';
+    msgEl.classList.remove('text-red-500', 'dark:text-red-400');
+    msgEl.classList.add('text-gray-600', 'dark:text-gray-400');
   }
 
   fetch('/api/runs/' + taskId + '/progress')
@@ -111,41 +164,70 @@
                 return;
               }
 
+              if (data.status === 'model_completed') {
+                updateBatchProgress(data);
+                addBatchLogRow(data.batch_model || '', false);
+                markRowDone(currentRow, false);
+                resetTestProgress();
+                title.textContent = 'Running batch...';
+                continue;
+              }
+
+              if (data.status === 'model_error') {
+                updateBatchProgress(data);
+                addBatchLogRow(data.batch_model || '', true, data.error);
+                markRowDone(currentRow, true, data.error);
+                resetTestProgress();
+                continue;
+              }
+
               if (data.status === 'done' || data.status === 'completed') {
-                title.textContent = 'Run Complete';
+                const isBatch = data.batch_total != null;
+                title.textContent = isBatch ? 'Batch Complete' : 'Run Complete';
                 bar.style.width = '100%';
                 bar.classList.remove('bg-blue-600');
                 bar.classList.add('bg-green-500');
                 doneEl.classList.remove('hidden');
 
-                const slug = data.model_slug || '';
-                const runId = data.run_id || '';
-                linkEl.href = (slug && runId) ? '/run/' + slug + '/' + runId : '/';
-                if (data.message) msgEl.textContent = data.message;
-                const total = data.total_tests ?? lastTotal;
-                countEl.textContent = total + ' / ' + total;
+                if (isBatch) {
+                  updateBatchProgress(data);
+                  batchBar.style.width = '100%';
+                  batchBar.classList.remove('bg-indigo-500');
+                  batchBar.classList.add('bg-green-500');
+                  linkEl.href = '/';
+                  linkEl.textContent = 'View Results on Dashboard';
+                  doneMsgEl.textContent = data.message || 'Batch completed successfully!';
+                } else {
+                  const slug = data.model_slug || '';
+                  const runId = data.run_id || '';
+                  linkEl.href = (slug && runId) ? '/run/' + slug + '/' + runId : '/';
+                  if (data.message) msgEl.textContent = data.message;
+                  const total = data.total_tests ?? lastTotal;
+                  countEl.textContent = total + ' / ' + total;
+                }
+
                 markRowDone(currentRow, false);
                 currentRow = null;
                 return;
               }
 
               if (data.status === 'running') {
+                if (data.batch_total != null) updateBatchProgress(data);
+
                 const pct = Math.round((data.current_test / data.total_tests) * 100);
                 bar.style.width = pct + '%';
-                title.textContent = 'Running tests...';
+                title.textContent = data.batch_total != null ? 'Running batch...' : 'Running tests...';
                 testEl.textContent = data.current_test_id;
                 countEl.textContent = data.current_test + ' / ' + data.total_tests;
                 lastTotal = data.total_tests;
 
                 if (data.error) {
-                  // This event is an error notification for the current test — mark it and move on
                   markRowDone(currentRow, true, data.error);
                   currentRow = null;
                   msgEl.textContent = '\u2717 ' + data.current_test_id + ': ' + data.error;
                   msgEl.classList.add('text-red-500', 'dark:text-red-400');
                   msgEl.classList.remove('text-gray-600', 'dark:text-gray-400');
                 } else {
-                  // New test starting — resolve previous row as success, open a new one
                   markRowDone(currentRow, false);
                   currentRow = createLogRow(data.current_test_id);
                   if (data.message) msgEl.textContent = data.message;

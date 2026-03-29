@@ -7,7 +7,7 @@ from collections.abc import Callable
 from datetime import datetime, timezone
 
 from ..metrics import compute_tokens_per_second
-from ..models import RunConfig, RunMetadata, RunProgress, TestCase, TestResult
+from ..models import ProviderConfig, RunConfig, RunMetadata, RunProgress, TestCase, TestResult
 from .llm_client import create_client_from_config
 from .loader import load_tests
 from .results import create_run_dir, get_next_run_id, save_metadata, save_result
@@ -205,3 +205,115 @@ def run_with_config(
         )
 
     return metadata
+
+
+def _make_batch_callback(
+    progress_cb: Callable[[RunProgress], None],
+    batch_current: int,
+    batch_total: int,
+    batch_model: str,
+) -> Callable[[RunProgress], None]:
+    """Wrap a progress callback to inject batch fields and remap 'completed' → 'model_completed'."""
+
+    def wrapped(p: RunProgress) -> None:
+        status = "model_completed" if p.status == "completed" else p.status
+        progress_cb(
+            RunProgress(
+                run_id=p.run_id,
+                task_id=p.task_id,
+                status=status,
+                current_test=p.current_test,
+                total_tests=p.total_tests,
+                current_test_id=p.current_test_id,
+                elapsed_seconds=p.elapsed_seconds,
+                message=p.message,
+                error=p.error,
+                batch_current=batch_current,
+                batch_total=batch_total,
+                batch_model=batch_model,
+            )
+        )
+
+    return wrapped
+
+
+def run_batch(
+    models: list[str],
+    api_url: str,
+    temperature: float,
+    system_prompt: str,
+    think: bool,
+    benchmarks_dir: str,
+    results_dir: str,
+    task_id: str,
+    progress_cb: Callable[[RunProgress], None] | None = None,
+) -> None:
+    """Run benchmarks against multiple Ollama models sequentially.
+
+    Each model's results are saved independently. One failure does not abort
+    the rest. A final 'completed' event is emitted after all models finish.
+    """
+    batch_total = len(models)
+    last_run_id = ""
+    last_model_slug = ""
+
+    for idx, model in enumerate(models, 1):
+        config = RunConfig(
+            provider_config=ProviderConfig(
+                provider="ollama",
+                api_url=api_url,
+                api_key="",
+                model=model,
+            ),
+            temperature=temperature,
+            system_prompt=system_prompt,
+            think=think,
+            benchmarks_dir=benchmarks_dir,
+            results_dir=results_dir,
+        )
+        wrapped_cb = (
+            _make_batch_callback(progress_cb, idx, batch_total, model)
+            if progress_cb
+            else None
+        )
+
+        try:
+            meta = run_with_config(config, task_id, wrapped_cb)
+            last_run_id = meta.run_id
+            last_model_slug = meta.model
+        except Exception as e:
+            logger.error("Batch: model=%s failed: %s", model, e)
+            if progress_cb:
+                progress_cb(
+                    RunProgress(
+                        run_id="",
+                        task_id=task_id,
+                        status="model_error",
+                        current_test=0,
+                        total_tests=0,
+                        current_test_id="",
+                        elapsed_seconds=0,
+                        message=f"Model {model} failed: {e}",
+                        error=str(e),
+                        batch_current=idx,
+                        batch_total=batch_total,
+                        batch_model=model,
+                    )
+                )
+
+    if progress_cb:
+        progress_cb(
+            RunProgress(
+                run_id=last_run_id,
+                task_id=task_id,
+                status="completed",
+                current_test=0,
+                total_tests=0,
+                current_test_id="",
+                elapsed_seconds=0,
+                message=f"Batch completed: {batch_total} model(s)",
+                batch_current=batch_total,
+                batch_total=batch_total,
+                batch_model=last_model_slug,
+            )
+        )

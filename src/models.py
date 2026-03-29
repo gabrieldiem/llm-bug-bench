@@ -120,6 +120,9 @@ class RunProgress:
     elapsed_seconds: float
     message: str = ""
     error: str | None = None
+    batch_current: int | None = None
+    batch_total: int | None = None
+    batch_model: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
