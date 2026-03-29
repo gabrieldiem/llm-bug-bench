@@ -1,7 +1,6 @@
 id: py_retry_003
 title: "Broken exponential backoff"
 language: python
-tags: [retry, backoff, distributed-systems]
 difficulty: medium
 
 prompt: |

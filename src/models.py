@@ -12,7 +12,6 @@ class TestCase:
     id: str
     title: str
     language: str
-    tags: list[str]
     difficulty: str
     prompt: str
     code: str | None = None
@@ -104,7 +103,6 @@ class RunConfig:
     provider_config: ProviderConfig
     temperature: float = 0.1
     max_tokens: int = 2048
-    tags: list[str] | None = None
     system_prompt: str = ""
     think: bool = False
     tests_dir: str = "./tests"

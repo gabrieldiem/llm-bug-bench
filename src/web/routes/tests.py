@@ -9,7 +9,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from ...core.loader import (
     delete_test,
-    get_all_tags,
     load_test_by_id,
     load_tests,
     save_test,
@@ -29,34 +28,48 @@ def handle_test_list(
     request: Request,
     tests_dir: str = Depends(get_tests_dir),
     language: str | None = None,
-    tag: str | None = None,
     difficulty: str | None = None,
+    sort: str = "id",
+    order: str = "asc",
 ):
-    """Render the test case browser with optional filters."""
-    tags_filter = [tag] if tag else None
-    all_cases = load_tests(tests_dir, tags=tags_filter)
+    """Render the test case browser with optional filters and sorting."""
+    all_cases = load_tests(tests_dir)
 
     if language:
         all_cases = [t for t in all_cases if t.language == language]
     if difficulty:
         all_cases = [t for t in all_cases if t.difficulty == difficulty]
 
-    all_tags = get_all_tags(tests_dir)
-    languages = sorted({t.language for t in load_tests(tests_dir)})
-    difficulties = sorted({t.difficulty for t in load_tests(tests_dir)})
+    all_tests = load_tests(tests_dir)
+    languages = sorted({t.language for t in all_tests})
+    difficulties = sorted({t.difficulty for t in all_tests})
+
+    key_map: dict = {
+        "id": lambda t: t.id.lower(),
+        "title": lambda t: t.title.lower(),
+        "language": lambda t: t.language.lower(),
+        "difficulty": lambda t: {"easy": 0, "medium": 1, "hard": 2}.get(
+            t.difficulty, 3
+        ),
+    }
+    key_fn = key_map.get(sort, key_map["id"])
+    all_cases = sorted(all_cases, key=key_fn, reverse=(order == "desc"))
+
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template = "partials/_tests_table.html" if is_htmx else "tests/list.html"
 
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        "tests/list.html",
+        template,
         {
             "request": request,
             "tests": all_cases,
-            "all_tags": all_tags,
             "languages": languages,
             "difficulties": difficulties,
             "filter_language": language,
-            "filter_tag": tag,
             "filter_difficulty": difficulty,
+            "sort": sort,
+            "order": order,
         },
     )
 
@@ -116,7 +129,6 @@ def api_create_test(
     id: str = Form(...),
     title: str = Form(...),
     language: str = Form(...),
-    tags: str = Form(""),
     difficulty: str = Form("medium"),
     prompt: str = Form(...),
     code: str = Form(""),
@@ -124,14 +136,12 @@ def api_create_test(
     notes: str = Form(""),
 ):
     """Create a new test case from form data."""
-    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     issues_list = [i.strip() for i in expected_issues.split("\n") if i.strip()]
 
     test = TestCase(
         id=id.strip(),
         title=title.strip(),
         language=language.strip(),
-        tags=tag_list,
         difficulty=difficulty.strip(),
         prompt=prompt,
         code=code if code.strip() else None,
@@ -162,7 +172,6 @@ def api_update_test(
     id: str = Form(...),
     title: str = Form(...),
     language: str = Form(...),
-    tags: str = Form(""),
     difficulty: str = Form("medium"),
     prompt: str = Form(...),
     code: str = Form(""),
@@ -170,14 +179,12 @@ def api_update_test(
     notes: str = Form(""),
 ):
     """Update an existing test case from form data."""
-    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     issues_list = [i.strip() for i in expected_issues.split("\n") if i.strip()]
 
     test = TestCase(
         id=id.strip(),
         title=title.strip(),
         language=language.strip(),
-        tags=tag_list,
         difficulty=difficulty.strip(),
         prompt=prompt,
         code=code if code.strip() else None,

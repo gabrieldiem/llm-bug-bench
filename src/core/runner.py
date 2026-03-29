@@ -15,9 +15,20 @@ from .results import create_run_dir, get_next_run_id, save_metadata, save_result
 logger = logging.getLogger(__name__)
 
 DEFAULT_SYSTEM_PROMPT = (
-    "You are a senior software engineer reviewing code for bugs. "
-    "Focus on concurrency issues, error handling, and distributed systems correctness. "
-    "Be specific: identify the exact lines, explain the bug, and describe the consequence."
+    "You are a code review expert specializing in concurrency, error handling, "
+    "and distributed systems. Your task is to find bugs in the provided code or "
+    "answer the given question.\n\n"
+    "For code reviews, follow this structure:\n"
+    "1. List each bug you find with:\n"
+    "   - The exact line(s) where the bug occurs\n"
+    "   - What the bug is (root cause)\n"
+    "   - What happens at runtime (consequence)\n"
+    "   - How to fix it\n"
+    "2. Only report real bugs — do not invent issues that are not present.\n"
+    "3. Consider language-specific semantics (e.g., GIL in Python, goroutine "
+    "scheduling in Go).\n\n"
+    "For theory questions, give a precise and structured answer.\n\n"
+    "Be thorough but concise. Do not repeat the code back."
 )
 
 
@@ -49,10 +60,10 @@ def run_with_config(
         max_tokens=config.max_tokens,
         think=config.think,
     )
-    tests = load_tests(config.tests_dir, tags=config.tags)
+    tests = load_tests(config.tests_dir)
 
     if not tests:
-        raise ValueError("No test cases found. Check tests_dir and tags.")
+        raise ValueError("No test cases found. Check tests_dir.")
 
     model = config.provider_config.model
     run_id = get_next_run_id(config.results_dir, model)

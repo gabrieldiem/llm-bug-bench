@@ -1,0 +1,47 @@
+{% macro sort_header(label, col, current_sort, current_order, align="left") %}
+  {% set next_order = "asc" if (current_sort == col and current_order == "desc") else "desc" %}
+  {% set arrow = "" %}
+  {% if current_sort == col %}
+    {% set arrow = " ▲" if current_order == "asc" else " ▼" %}
+  {% endif %}
+  <th class="px-4 py-3 text-{{ align }} cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 select-none"
+      hx-get="/run/{{ model_slug }}/{{ meta.run_id }}?sort={{ col }}&order={{ next_order }}"
+      hx-target="#run-table"
+      hx-swap="innerHTML">
+    {{ label }}{{ arrow }}
+  </th>
+{% endmacro %}
+
+<table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+  <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
+    <tr>
+      {{ sort_header("Test ID", "test_id", sort, order) }}
+      {{ sort_header("Elapsed", "elapsed", sort, order, "right") }}
+      {{ sort_header("tok/s", "tps", sort, order, "right") }}
+      {{ sort_header("Score", "score", sort, order, "right") }}
+      <th class="px-4 py-3"></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for row in rows %}
+    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+      <td class="px-4 py-3 font-mono">
+        {{ row.test_id }}
+        {% if row.error %}
+          <span class="ml-1 text-xs text-red-500">[error]</span>
+        {% endif %}
+      </td>
+      <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.elapsed_seconds }}s</td>
+      <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.tokens_per_second or "—" }}</td>
+      <td class="px-4 py-3 text-right">
+        {% set score = row.score %}
+        {% include "partials/_score_badge.html" %}
+      </td>
+      <td class="px-4 py-3 text-right">
+        <a href="/run/{{ row.model_slug }}/{{ row.run_id }}/{{ row.test_id }}"
+           class="text-blue-600 dark:text-blue-400 hover:underline">View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

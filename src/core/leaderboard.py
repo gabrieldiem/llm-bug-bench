@@ -118,6 +118,8 @@ def sort_leaderboard(
         "speed": lambda e: e.avg_tokens_per_second or 0,
         "runs": lambda e: e.total_runs,
         "model": lambda e: e.model.lower(),
+        "provider": lambda e: e.provider.lower(),
+        "latest_score": lambda e: e.latest_avg_score or 0,
     }
     key_fn = key_map.get(sort_by, key_map["score"])
     return sorted(entries, key=key_fn, reverse=descending)

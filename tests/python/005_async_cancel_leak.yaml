@@ -1,7 +1,6 @@
 id: py_async_005
 title: "Asyncio task swallows cancellation"
 language: python
-tags: [asyncio, cancellation, resource-leak]
 difficulty: hard
 
 prompt: |

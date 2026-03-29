@@ -17,6 +17,8 @@ router = APIRouter()
 def handle_dashboard(
     request: Request,
     results_dir: str = Depends(get_results_dir),
+    sort: str = "timestamp",
+    order: str = "desc",
 ):
     """Render the main dashboard with all runs, scores, and summary stats."""
     results_path = Path(results_dir)
@@ -45,16 +47,32 @@ def handle_dashboard(
                 "model_slug": run_dir.parent.name,
             }
         )
-    runs.sort(key=lambda r: r["timestamp"], reverse=True)
+
+    key_map: dict = {
+        "model": lambda r: r["model"].lower(),
+        "run_id": lambda r: r["run_id"].lower(),
+        "timestamp": lambda r: r["timestamp"],
+        "tests": lambda r: r["total_tests"],
+        "tps": lambda r: r["avg_tps"] or 0,
+        "score": lambda r: r["avg_score"] or 0,
+    }
+    key_fn = key_map.get(sort, key_map["timestamp"])
+    runs.sort(key=key_fn, reverse=(order == "desc"))
 
     total_models = len({r["model"] for r in runs})
+
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template = "partials/_dashboard_table.html" if is_htmx else "dashboard.html"
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        "dashboard.html",
+        template,
         {
             "request": request,
             "runs": runs,
             "total_models": total_models,
             "total_runs": len(runs),
+            "sort": sort,
+            "order": order,
         },
     )

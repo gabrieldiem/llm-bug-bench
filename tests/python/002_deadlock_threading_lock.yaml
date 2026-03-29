@@ -1,7 +1,6 @@
 id: py_deadlock_002
 title: "Deadlock with non-reentrant lock"
 language: python
-tags: [deadlock, threading, lock]
 difficulty: medium
 
 prompt: |

@@ -1,7 +1,6 @@
 id: py_socket_004
 title: "Missing error handling in socket code"
 language: python
-tags: [error-handling, socket, networking]
 difficulty: easy
 
 prompt: |

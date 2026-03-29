@@ -1,7 +1,6 @@
 id: go_deadlock_002
 title: "Deadlock from inconsistent mutex ordering"
 language: go
-tags: [deadlock, mutex, goroutine]
 difficulty: medium
 
 prompt: |

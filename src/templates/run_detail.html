@@ -45,40 +45,8 @@
   </div>
 </div>
 
-<div class="overflow-x-auto">
-  <table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
-    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
-      <tr>
-        <th class="px-4 py-3 text-left">Test ID</th>
-        <th class="px-4 py-3 text-right">Elapsed</th>
-        <th class="px-4 py-3 text-right">tok/s</th>
-        <th class="px-4 py-3 text-right">Score</th>
-        <th class="px-4 py-3"></th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-      {% for row in rows %}
-      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-        <td class="px-4 py-3 font-mono">
-          {{ row.test_id }}
-          {% if row.error %}
-            <span class="ml-1 text-xs text-red-500">[error]</span>
-          {% endif %}
-        </td>
-        <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.elapsed_seconds }}s</td>
-        <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.tokens_per_second or "—" }}</td>
-        <td class="px-4 py-3 text-right">
-          {% set score = row.score %}
-          {% include "partials/_score_badge.html" %}
-        </td>
-        <td class="px-4 py-3 text-right">
-          <a href="/run/{{ row.model_slug }}/{{ row.run_id }}/{{ row.test_id }}"
-             class="text-blue-600 dark:text-blue-400 hover:underline">View</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="overflow-x-auto" id="run-table">
+  {% include "partials/_run_table.html" %}
 </div>
 
 <!-- Judge modal -->

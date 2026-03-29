@@ -1,7 +1,6 @@
 id: theory_cap_001
 title: "CAP Theorem trade-offs"
 language: theory
-tags: [cap-theorem, distributed-systems]
 difficulty: medium
 
 prompt: |

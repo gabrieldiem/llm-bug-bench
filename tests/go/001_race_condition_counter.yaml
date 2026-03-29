@@ -1,7 +1,6 @@
 id: go_race_001
 title: "Race condition in concurrent counter"
 language: go
-tags: [race-condition, goroutine, mutex]
 difficulty: easy
 
 prompt: |

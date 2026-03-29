@@ -135,30 +135,30 @@ The suite ships with 12 test cases across three categories:
 
 ### Go (5 tests)
 
-| ID                | Title                                     | Tags                                      | Difficulty |
-| ----------------- | ----------------------------------------- | ----------------------------------------- | ---------- |
-| `go_race_001`     | Race condition in concurrent counter      | race-condition, goroutine, mutex          | easy       |
-| `go_deadlock_002` | Deadlock from inconsistent mutex ordering | deadlock, mutex, goroutine                | medium     |
-| `go_chan_003`      | Unbuffered channel blocks forever         | channel, goroutine, deadlock              | easy       |
-| `go_retry_004`    | Retry loop off-by-one error               | retry, off-by-one, distributed-systems    | medium     |
-| `go_grpc_005`     | Missing error handling in gRPC call       | error-handling, grpc, distributed-systems | easy       |
+| ID                | Title                                     | Difficulty |
+| ----------------- | ----------------------------------------- | ---------- |
+| `go_race_001`     | Race condition in concurrent counter      | easy       |
+| `go_deadlock_002` | Deadlock from inconsistent mutex ordering | medium     |
+| `go_chan_003`      | Unbuffered channel blocks forever         | easy       |
+| `go_retry_004`    | Retry loop off-by-one error               | medium     |
+| `go_grpc_005`     | Missing error handling in gRPC call       | easy       |
 
 ### Python (5 tests)
 
-| ID                | Title                                 | Tags                                 | Difficulty |
-| ----------------- | ------------------------------------- | ------------------------------------ | ---------- |
-| `py_race_001`     | Race condition on shared list         | race-condition, threading            | easy       |
-| `py_deadlock_002` | Deadlock with non-reentrant lock      | deadlock, threading, lock            | medium     |
-| `py_retry_003`    | Broken exponential backoff            | retry, backoff, distributed-systems  | medium     |
-| `py_socket_004`   | Missing error handling in socket code | error-handling, socket, networking   | easy       |
-| `py_async_005`    | Asyncio task swallows cancellation    | asyncio, cancellation, resource-leak | hard       |
+| ID                | Title                                 | Difficulty |
+| ----------------- | ------------------------------------- | ---------- |
+| `py_race_001`     | Race condition on shared list         | easy       |
+| `py_deadlock_002` | Deadlock with non-reentrant lock      | medium     |
+| `py_retry_003`    | Broken exponential backoff            | medium     |
+| `py_socket_004`   | Missing error handling in socket code | easy       |
+| `py_async_005`    | Asyncio task swallows cancellation    | hard       |
 
 ### Theory (2 tests)
 
-| ID               | Title                     | Tags                                            | Difficulty |
-| ---------------- | ------------------------- | ----------------------------------------------- | ---------- |
-| `theory_cap_001` | CAP Theorem trade-offs    | cap-theorem, distributed-systems                | medium     |
-| `theory_bft_002` | Byzantine Fault Tolerance | byzantine, fault-tolerance, distributed-systems | hard       |
+| ID               | Title                     | Difficulty |
+| ---------------- | ------------------------- | ---------- |
+| `theory_cap_001` | CAP Theorem trade-offs    | medium     |
+| `theory_bft_002` | Byzantine Fault Tolerance | hard       |
 
 ### Adding new tests
 
@@ -168,7 +168,6 @@ Create a new `.yaml` file anywhere under `tests/`. It is auto-discovered — no 
 id: unique_test_id        # must be unique across all tests
 title: "Short description"
 language: go               # go | python | theory (or any string)
-tags: [tag1, tag2]         # used for filtering on the Tests page
 difficulty: easy           # easy | medium | hard
 
 prompt: |

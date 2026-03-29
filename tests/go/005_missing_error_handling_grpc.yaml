@@ -1,7 +1,6 @@
 id: go_grpc_005
 title: "Missing error handling in gRPC call"
 language: go
-tags: [error-handling, grpc, distributed-systems]
 difficulty: easy
 
 prompt: |

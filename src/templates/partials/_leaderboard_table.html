@@ -18,9 +18,9 @@
     <tr>
       <th class="px-4 py-3 text-left w-10">#</th>
       {{ sort_header("Model", "model", sort, order) }}
-      <th class="px-4 py-3 text-left">Provider</th>
+      {{ sort_header("Provider", "provider", sort, order) }}
       {{ sort_header("Best Avg Score", "score", sort, order, "right") }}
-      <th class="px-4 py-3 text-right">Latest Score</th>
+      {{ sort_header("Latest Score", "latest_score", sort, order, "right") }}
       {{ sort_header("Avg tok/s", "speed", sort, order, "right") }}
       {{ sort_header("Runs", "runs", sort, order, "right") }}
       <th class="px-4 py-3"></th>

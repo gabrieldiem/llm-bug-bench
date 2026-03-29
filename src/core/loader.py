@@ -13,12 +13,11 @@ from ..models import TestCase
 logger = logging.getLogger(__name__)
 
 
-def load_tests(tests_dir: str, tags: list[str] | None = None) -> list[TestCase]:
-    """Discover and load all YAML test cases, optionally filtered by tags.
+def load_tests(tests_dir: str) -> list[TestCase]:
+    """Discover and load all YAML test cases.
 
     Args:
         tests_dir: Root directory to search recursively for *.yaml files.
-        tags: If provided, only return tests matching at least one tag (OR logic).
 
     Returns:
         Sorted list of TestCase objects (by language, then id).
@@ -39,20 +38,10 @@ def load_tests(tests_dir: str, tags: list[str] | None = None) -> list[TestCase]:
             logger.warning("Empty YAML file skipped: %s", yaml_file)
             continue
 
-        case = _parse_test_case(data)
-
-        if tags and not set(tags) & set(case.tags):
-            continue
-
-        cases.append(case)
+        cases.append(_parse_test_case(data))
 
     cases.sort(key=lambda c: (c.language, c.id))
-    logger.info(
-        "Loaded %d test(s) from %s%s",
-        len(cases),
-        tests_dir,
-        f" (tags={tags})" if tags else "",
-    )
+    logger.info("Loaded %d test(s) from %s", len(cases), tests_dir)
     return cases
 
 
@@ -121,22 +110,12 @@ def delete_test(tests_dir: str, test_id: str) -> None:
     logger.info("Test deleted: %s (%s)", test_id, path)
 
 
-def get_all_tags(tests_dir: str) -> list[str]:
-    """Return sorted list of all unique tags across test cases."""
-    tests = load_tests(tests_dir)
-    tags: set[str] = set()
-    for t in tests:
-        tags.update(t.tags)
-    return sorted(tags)
-
-
 def _parse_test_case(data: dict) -> TestCase:
     """Parse a raw YAML dict into a TestCase dataclass."""
     return TestCase(
         id=data["id"],
         title=data["title"],
         language=data["language"],
-        tags=data.get("tags", []),
         difficulty=data.get("difficulty", "unknown"),
         prompt=data["prompt"],
         code=data.get("code"),
@@ -170,7 +149,6 @@ def _write_test_yaml(path: Path, test: TestCase) -> None:
         "id": test.id,
         "title": test.title,
         "language": test.language,
-        "tags": list(test.tags),
         "difficulty": test.difficulty,
         "prompt": test.prompt,
     }

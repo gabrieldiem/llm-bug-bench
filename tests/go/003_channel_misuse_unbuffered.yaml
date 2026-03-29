@@ -1,7 +1,6 @@
 id: go_chan_003
 title: "Unbuffered channel blocks forever"
 language: go
-tags: [channel, goroutine, deadlock]
 difficulty: easy
 
 prompt: |

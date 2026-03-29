@@ -1,7 +1,6 @@
 id: py_race_001
 title: "Race condition on shared list"
 language: python
-tags: [race-condition, threading]
 difficulty: easy
 
 prompt: |

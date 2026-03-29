@@ -81,21 +81,6 @@
     </div>
   </div>
 
-  <!-- Tags -->
-  {% if all_tags %}
-  <div class="mb-5">
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Tags (optional)</label>
-    <div class="flex flex-wrap gap-2">
-      {% for tag in all_tags %}
-      <label class="flex items-center gap-1.5 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-xs cursor-pointer hover:border-blue-400">
-        <input type="checkbox" class="tag-checkbox rounded border-gray-300 dark:border-gray-600" value="{{ tag }}">
-        {{ tag }}
-      </label>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
   <!-- System prompt -->
   <div class="mb-6">
     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">System Prompt</label>
@@ -149,9 +134,6 @@ function startRun() {
     return;
   }
 
-  const tags = [];
-  document.querySelectorAll('.tag-checkbox:checked').forEach(cb => tags.push(cb.value));
-
   const payload = {
     provider: currentProvider,
     model: model,
@@ -160,7 +142,6 @@ function startRun() {
     temperature: parseFloat(document.getElementById('run-temperature').value),
     max_tokens: parseInt(document.getElementById('run-max-tokens').value),
     think: document.getElementById('run-think').checked,
-    tags: tags,
     system_prompt: document.getElementById('run-system-prompt').value,
   };
 

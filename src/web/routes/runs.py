@@ -11,7 +11,6 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
-from ...core.loader import get_all_tags, load_tests
 from ...core.results import (
     delete_run,
     load_all_judge_results,
@@ -47,13 +46,11 @@ async def handle_new_run_form(
     ollama_url: str = Depends(get_ollama_url),
 ):
     """Render the new run configuration form."""
-    all_tags = get_all_tags(tests_dir)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         "runs/new.html",
         {
             "request": request,
-            "all_tags": all_tags,
             "default_system_prompt": DEFAULT_SYSTEM_PROMPT,
             "ollama_url": ollama_url,
         },
@@ -79,6 +76,8 @@ def handle_run_detail(
     run_id: str,
     request: Request,
     results_dir: str = Depends(get_results_dir),
+    sort: str = "test_id",
+    order: str = "asc",
 ):
     """Render the run detail page with per-test results and scores."""
     run_dir = Path(results_dir) / model_slug / run_id
@@ -99,15 +98,30 @@ def handle_run_detail(
                 "run_id": run_id,
             }
         )
+
+    key_map: dict = {
+        "test_id": lambda r: r["test_id"].lower(),
+        "elapsed": lambda r: r["elapsed_seconds"] or 0,
+        "tps": lambda r: r["tokens_per_second"] or 0,
+        "score": lambda r: r["score"] or 0,
+    }
+    key_fn = key_map.get(sort, key_map["test_id"])
+    rows.sort(key=key_fn, reverse=(order == "desc"))
+
+    is_htmx = request.headers.get("HX-Request") == "true"
+    template = "partials/_run_table.html" if is_htmx else "run_detail.html"
+
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        "run_detail.html",
+        template,
         {
             "request": request,
             "meta": meta,
             "rows": rows,
             "model_slug": model_slug,
             "has_unjudged": any(r["score"] is None for r in rows),
+            "sort": sort,
+            "order": order,
         },
     )
 
@@ -181,9 +195,6 @@ async def api_start_run(
     else:
         return JSONResponse({"error": f"Unknown provider: {provider}"}, status_code=400)
 
-    tags_raw = body.get("tags", [])
-    tags = [t.strip() for t in tags_raw if t.strip()] if tags_raw else None
-
     config = RunConfig(
         provider_config=ProviderConfig(
             provider=provider,
@@ -193,7 +204,6 @@ async def api_start_run(
         ),
         temperature=float(body.get("temperature", 0.1)),
         max_tokens=int(body.get("max_tokens", 2048)),
-        tags=tags,
         system_prompt=body.get("system_prompt", ""),
         think=bool(body.get("think", False)),
         tests_dir=tests_dir,

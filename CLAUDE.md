@@ -81,7 +81,7 @@ __main__.py → web/app.py → web/routes/*.py
 
 ## Test Cases
 
-YAML files in `tests/`, auto-discovered. Fields: `id`, `title`, `language`, `tags`, `difficulty`, `prompt`, `code` (optional), `expected_issues`, `notes`.
+YAML files in `tests/`, auto-discovered. Fields: `id`, `title`, `language`, `difficulty`, `prompt`, `code` (optional), `expected_issues`, `notes`.
 
 12 tests: 5 Go, 5 Python, 2 theory (CAP, Byzantine faults).
 

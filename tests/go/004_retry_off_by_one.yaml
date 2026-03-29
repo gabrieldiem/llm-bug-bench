@@ -1,7 +1,6 @@
 id: go_retry_004
 title: "Retry loop off-by-one error"
 language: go
-tags: [retry, off-by-one, distributed-systems]
 difficulty: medium
 
 prompt: |

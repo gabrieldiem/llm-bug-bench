@@ -16,48 +16,7 @@
   </div>
 </div>
 
-{% if runs %}
-<div class="overflow-x-auto">
-  <table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
-    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
-      <tr>
-        <th class="px-4 py-3 text-left">Model</th>
-        <th class="px-4 py-3 text-left">Run ID</th>
-        <th class="px-4 py-3 text-left">Timestamp</th>
-        <th class="px-4 py-3 text-right">Tests</th>
-        <th class="px-4 py-3 text-right">Avg tok/s</th>
-        <th class="px-4 py-3 text-right">Avg Score</th>
-        <th class="px-4 py-3"></th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-      {% for run in runs %}
-      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-        <td class="px-4 py-3 font-mono">{{ run.model }}</td>
-        <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{{ run.run_id }}</td>
-        <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ run.timestamp[:19].replace("T", " ") }}</td>
-        <td class="px-4 py-3 text-right">{{ run.total_tests }}</td>
-        <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ run.avg_tps or "—" }}</td>
-        <td class="px-4 py-3 text-right">
-          {% set score = run.avg_score %}
-          {% include "partials/_score_badge.html" %}
-        </td>
-        <td class="px-4 py-3 text-right">
-          <a href="/run/{{ run.model_slug }}/{{ run.run_id }}"
-             class="text-blue-600 dark:text-blue-400 hover:underline">View</a>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="overflow-x-auto" id="dashboard-table">
+  {% include "partials/_dashboard_table.html" %}
 </div>
-{% else %}
-<div class="bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
-  <p class="text-gray-500 dark:text-gray-400 mb-4">No runs found yet.</p>
-  <a href="/runs/new"
-     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors">
-    Start your first run
-  </a>
-</div>
-{% endif %}
 {% endblock %}

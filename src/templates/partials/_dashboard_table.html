@@ -1,0 +1,56 @@
+{% macro sort_header(label, col, current_sort, current_order, align="left") %}
+  {% set next_order = "asc" if (current_sort == col and current_order == "desc") else "desc" %}
+  {% set arrow = "" %}
+  {% if current_sort == col %}
+    {% set arrow = " ▲" if current_order == "asc" else " ▼" %}
+  {% endif %}
+  <th class="px-4 py-3 text-{{ align }} cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 select-none"
+      hx-get="/?sort={{ col }}&order={{ next_order }}"
+      hx-target="#dashboard-table"
+      hx-swap="innerHTML">
+    {{ label }}{{ arrow }}
+  </th>
+{% endmacro %}
+
+{% if runs %}
+<table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+  <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
+    <tr>
+      {{ sort_header("Model", "model", sort, order) }}
+      {{ sort_header("Run ID", "run_id", sort, order) }}
+      {{ sort_header("Timestamp", "timestamp", sort, order) }}
+      {{ sort_header("Tests", "tests", sort, order, "right") }}
+      {{ sort_header("Avg tok/s", "tps", sort, order, "right") }}
+      {{ sort_header("Avg Score", "score", sort, order, "right") }}
+      <th class="px-4 py-3"></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for run in runs %}
+    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+      <td class="px-4 py-3 font-mono">{{ run.model }}</td>
+      <td class="px-4 py-3 font-mono text-gray-500 dark:text-gray-400">{{ run.run_id }}</td>
+      <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ run.timestamp[:19].replace("T", " ") }}</td>
+      <td class="px-4 py-3 text-right">{{ run.total_tests }}</td>
+      <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ run.avg_tps or "—" }}</td>
+      <td class="px-4 py-3 text-right">
+        {% set score = run.avg_score %}
+        {% include "partials/_score_badge.html" %}
+      </td>
+      <td class="px-4 py-3 text-right">
+        <a href="/run/{{ run.model_slug }}/{{ run.run_id }}"
+           class="text-blue-600 dark:text-blue-400 hover:underline">View</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+  <p class="text-gray-500 dark:text-gray-400 mb-4">No runs found yet.</p>
+  <a href="/runs/new"
+     class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors">
+    Start your first run
+  </a>
+</div>
+{% endif %}

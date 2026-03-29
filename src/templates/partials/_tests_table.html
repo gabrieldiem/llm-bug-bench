@@ -1,0 +1,60 @@
+{% macro sort_header(label, col, current_sort, current_order, align="left") %}
+  {% set next_order = "asc" if (current_sort == col and current_order == "desc") else "desc" %}
+  {% set arrow = "" %}
+  {% if current_sort == col %}
+    {% set arrow = " ▲" if current_order == "asc" else " ▼" %}
+  {% endif %}
+  {% set params = "sort=" ~ col ~ "&order=" ~ next_order %}
+  {% if filter_language %}{% set params = params ~ "&language=" ~ filter_language %}{% endif %}
+  {% if filter_difficulty %}{% set params = params ~ "&difficulty=" ~ filter_difficulty %}{% endif %}
+  <th class="px-4 py-3 text-{{ align }} cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 select-none"
+      hx-get="/tests?{{ params }}"
+      hx-target="#tests-table"
+      hx-swap="innerHTML">
+    {{ label }}{{ arrow }}
+  </th>
+{% endmacro %}
+
+{% if tests %}
+<table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+  <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
+    <tr>
+      {{ sort_header("ID", "id", sort, order) }}
+      {{ sort_header("Title", "title", sort, order) }}
+      {{ sort_header("Language", "language", sort, order) }}
+      {{ sort_header("Difficulty", "difficulty", sort, order) }}
+      <th class="px-4 py-3 text-right">Actions</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for test in tests %}
+    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" id="test-row-{{ test.id }}">
+      <td class="px-4 py-3 font-mono">
+        <a href="/tests/{{ test.id }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ test.id }}</a>
+      </td>
+      <td class="px-4 py-3">{{ test.title }}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-xs font-medium">{{ test.language }}</span>
+      </td>
+      <td class="px-4 py-3 text-xs">
+        {% if test.difficulty == 'hard' %}
+          <span class="text-red-600 dark:text-red-400 font-medium">{{ test.difficulty }}</span>
+        {% elif test.difficulty == 'medium' %}
+          <span class="text-yellow-600 dark:text-yellow-400 font-medium">{{ test.difficulty }}</span>
+        {% else %}
+          <span class="text-green-600 dark:text-green-400 font-medium">{{ test.difficulty }}</span>
+        {% endif %}
+      </td>
+      <td class="px-4 py-3 text-right space-x-2">
+        <a href="/tests/{{ test.id }}/edit" class="text-blue-600 dark:text-blue-400 hover:underline text-xs">Edit</a>
+        <button onclick="deleteTest('{{ test.id }}')" class="text-red-500 hover:underline text-xs">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+  <p class="text-gray-500 dark:text-gray-400 mb-4">No test cases match the filters.</p>
+</div>
+{% endif %}

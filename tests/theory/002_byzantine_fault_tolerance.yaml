@@ -1,7 +1,6 @@
 id: theory_bft_002
 title: "Byzantine Fault Tolerance"
 language: theory
-tags: [byzantine, fault-tolerance, distributed-systems]
 difficulty: hard
 
 prompt: |
