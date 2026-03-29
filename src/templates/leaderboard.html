@@ -10,7 +10,101 @@
   </a>
 </div>
 
+{% if entries %}
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-5 mb-6">
+  <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Score Comparison</h2>
+  <div id="score-chart-wrapper">
+    <canvas id="score-chart"></canvas>
+  </div>
+</div>
+{% endif %}
+
 <div id="leaderboard-table">
   {% include "partials/_leaderboard_table.html" %}
 </div>
+
+{% if entries %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+(function() {
+  const labels = [{% for e in entries %}"{{ e.model }}"{% if not loop.last %},{% endif %}{% endfor %}];
+  const bestScores = [{% for e in entries %}{{ e.best_avg_score if e.best_avg_score is not none else 'null' }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const latestScores = [{% for e in entries %}{{ e.latest_avg_score if e.latest_avg_score is not none else 'null' }}{% if not loop.last %},{% endif %}{% endfor %}];
+  const tpsValues = [{% for e in entries %}{{ e.avg_tokens_per_second if e.avg_tokens_per_second is not none else 'null' }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+  function scoreColor(v, alpha) {
+    if (v === null) return 'rgba(156,163,175,' + alpha + ')';
+    if (v >= 15)   return 'rgba(34,197,94,' + alpha + ')';
+    if (v >= 8)    return 'rgba(234,179,8,' + alpha + ')';
+    return 'rgba(239,68,68,' + alpha + ')';
+  }
+
+  const isDark = document.documentElement.classList.contains('dark');
+  const textColor = isDark ? '#d1d5db' : '#4b5563';
+  const gridColor = isDark ? 'rgba(75,85,99,0.4)' : 'rgba(209,213,219,0.6)';
+
+  const wrapper = document.getElementById('score-chart-wrapper');
+  wrapper.style.height = Math.max(200, labels.length * 44) + 'px';
+
+  new Chart(document.getElementById('score-chart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Best Avg Score',
+          data: bestScores,
+          backgroundColor: bestScores.map(function(v) { return scoreColor(v, 0.85); }),
+          borderColor: bestScores.map(function(v) { return scoreColor(v, 1); }),
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+        {
+          label: 'Latest Avg Score',
+          data: latestScores,
+          backgroundColor: latestScores.map(function(v) { return scoreColor(v, 0.35); }),
+          borderColor: latestScores.map(function(v) { return scoreColor(v, 0.8); }),
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+      ],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          min: 0,
+          max: 20,
+          ticks: { stepSize: 5, color: textColor },
+          grid: { color: gridColor },
+        },
+        y: {
+          ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 12 } },
+          grid: { display: false },
+        },
+      },
+      plugins: {
+        legend: {
+          labels: { color: textColor, boxWidth: 14, padding: 16 },
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var val = ctx.parsed.x;
+              return ctx.dataset.label + ': ' + (val !== null ? val.toFixed(1) : '—');
+            },
+            afterBody: function(items) {
+              var i = items[0].dataIndex;
+              return tpsValues[i] !== null ? ['Avg tok/s: ' + tpsValues[i].toFixed(1)] : [];
+            },
+          },
+        },
+      },
+    },
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

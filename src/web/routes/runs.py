@@ -301,7 +301,9 @@ async def api_start_batch_run(
     models = [m.strip() for m in body.get("models", []) if str(m).strip()]
 
     if not models:
-        return JSONResponse({"error": "At least one model is required"}, status_code=400)
+        return JSONResponse(
+            {"error": "At least one model is required"}, status_code=400
+        )
 
     api_url = body.get("api_url", "") or f"{ollama_url}/v1"
 

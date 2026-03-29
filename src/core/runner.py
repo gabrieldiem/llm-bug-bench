@@ -6,8 +6,17 @@ import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
 
+import httpx
+
 from ..metrics import compute_tokens_per_second
-from ..models import ProviderConfig, RunConfig, RunMetadata, RunProgress, TestCase, TestResult
+from ..models import (
+    ProviderConfig,
+    RunConfig,
+    RunMetadata,
+    RunProgress,
+    TestCase,
+    TestResult,
+)
 from .llm_client import create_client_from_config
 from .loader import load_tests
 from .results import create_run_dir, get_next_run_id, save_metadata, save_result
@@ -182,6 +191,9 @@ def run_with_config(
     )
     save_metadata(run_dir, metadata)
 
+    if config.provider_config.provider == "ollama":
+        _unload_ollama_model(config.provider_config.api_url, model)
+
     logger.info(
         "Run completed: %d tests in %.1fs, avg_tps=%s, output=%s",
         len(results),
@@ -205,6 +217,20 @@ def run_with_config(
         )
 
     return metadata
+
+
+def _unload_ollama_model(api_url: str, model: str) -> None:
+    """Evict a model from Ollama VRAM by sending keep_alive=0."""
+    base_url = api_url.removesuffix("/v1").rstrip("/")
+    try:
+        httpx.post(
+            f"{base_url}/api/generate",
+            json={"model": model, "keep_alive": 0},
+            timeout=10,
+        )
+        logger.info("Unloaded model from VRAM: %s", model)
+    except Exception as e:
+        logger.warning("Failed to unload model %s: %s", model, e)
 
 
 def _make_batch_callback(
