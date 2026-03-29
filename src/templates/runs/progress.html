@@ -49,6 +49,8 @@
   const doneEl = document.getElementById('progress-done');
   const linkEl = document.getElementById('progress-link');
 
+  let lastTotal = 0;
+
   fetch('/api/runs/' + taskId + '/progress')
     .then(response => {
       const reader = response.body.getReader();
@@ -86,11 +88,11 @@
                 doneEl.classList.remove('hidden');
 
                 if (data.run_id) {
-                  const model = data.current_test_id ? '' : '';
                   linkEl.href = '/';
                 }
                 if (data.message) msgEl.textContent = data.message;
-                countEl.textContent = data.total_tests + ' / ' + data.total_tests;
+                const total = data.total_tests ?? lastTotal;
+                countEl.textContent = total + ' / ' + total;
                 return;
               }
 
@@ -100,7 +102,16 @@
                 title.textContent = 'Running tests...';
                 testEl.textContent = data.current_test_id;
                 countEl.textContent = data.current_test + ' / ' + data.total_tests;
-                if (data.message) msgEl.textContent = data.message;
+                lastTotal = data.total_tests;
+                if (data.error) {
+                  msgEl.textContent = '\u2717 ' + data.current_test_id + ': ' + data.error;
+                  msgEl.classList.add('text-red-500', 'dark:text-red-400');
+                  msgEl.classList.remove('text-gray-600', 'dark:text-gray-400');
+                } else {
+                  if (data.message) msgEl.textContent = data.message;
+                  msgEl.classList.remove('text-red-500', 'dark:text-red-400');
+                  msgEl.classList.add('text-gray-600', 'dark:text-gray-400');
+                }
               }
             } catch(e) {}
           }

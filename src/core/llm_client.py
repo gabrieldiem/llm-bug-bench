@@ -150,7 +150,7 @@ class LLMClient:
             max_tokens=self.max_tokens,
             stream=True,
             stream_options={"include_usage": True},
-            extra_body={"think": self.think},
+            extra_body={"think": True} if self.think else None,
         )
         content_parts: list[str] = []
         reasoning_parts: list[str] = []

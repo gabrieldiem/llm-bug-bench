@@ -145,6 +145,20 @@ def run_with_config(
                 error=str(e),
             )
             logger.warning("%s failed: %s", test.id, e)
+            if progress_cb:
+                progress_cb(
+                    RunProgress(
+                        run_id=run_id,
+                        task_id=task_id,
+                        status="running",
+                        current_test=i,
+                        total_tests=len(tests),
+                        current_test_id=test.id,
+                        elapsed_seconds=0,
+                        message=f"{test.id} failed",
+                        error=str(e),
+                    )
+                )
 
         save_result(run_dir, result)
         results.append(result)

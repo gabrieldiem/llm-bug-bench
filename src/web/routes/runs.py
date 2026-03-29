@@ -239,6 +239,7 @@ async def api_run_progress(
         return JSONResponse({"error": "Task not found"}, status_code=404)
 
     async def _stream():
+        last_progress = None
         while True:
             try:
                 progress = await asyncio.wait_for(
@@ -250,12 +251,17 @@ async def api_run_progress(
 
             if progress is None:
                 exc = entry.task.exception() if entry.task.done() else None
+                payload: dict = {"status": "failed" if exc else "done"}
                 if exc:
-                    yield f"data: {json.dumps({'status': 'failed', 'error': str(exc)})}\n\n"
-                else:
-                    yield f"data: {json.dumps({'status': 'done'})}\n\n"
+                    payload["error"] = str(exc)
+                if last_progress:
+                    payload["total_tests"] = last_progress.total_tests
+                    payload["current_test"] = last_progress.current_test
+                    payload["run_id"] = last_progress.run_id
+                yield f"data: {json.dumps(payload)}\n\n"
                 break
 
+            last_progress = progress
             yield f"data: {json.dumps(asdict(progress))}\n\n"
 
             if progress.status in ("completed", "failed"):
