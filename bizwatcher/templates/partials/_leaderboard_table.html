@@ -1,0 +1,68 @@
+{% macro sort_header(label, col, current_sort, current_order, align="left") %}
+  {% set next_order = "asc" if (current_sort == col and current_order == "desc") else "desc" %}
+  {% set arrow = "" %}
+  {% if current_sort == col %}
+    {% set arrow = " ▲" if current_order == "asc" else " ▼" %}
+  {% endif %}
+  <th class="px-4 py-3 text-{{ align }} cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 select-none"
+      hx-get="/api/leaderboard?sort={{ col }}&order={{ next_order }}"
+      hx-target="#leaderboard-table"
+      hx-swap="innerHTML">
+    {{ label }}{{ arrow }}
+  </th>
+{% endmacro %}
+
+{% if entries %}
+<table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+  <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
+    <tr>
+      <th class="px-4 py-3 text-left w-10">#</th>
+      {{ sort_header("Model", "model", sort, order) }}
+      <th class="px-4 py-3 text-left">Provider</th>
+      {{ sort_header("Best Avg Score", "score", sort, order, "right") }}
+      <th class="px-4 py-3 text-right">Latest Score</th>
+      {{ sort_header("Avg tok/s", "speed", sort, order, "right") }}
+      {{ sort_header("Runs", "runs", sort, order, "right") }}
+      <th class="px-4 py-3"></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for entry in entries %}
+    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+      <td class="px-4 py-3 text-gray-400 dark:text-gray-500 font-mono">{{ loop.index }}</td>
+      <td class="px-4 py-3 font-mono font-semibold">{{ entry.model }}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-0.5 rounded text-xs font-medium
+          {% if entry.provider == 'openai' %}bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400
+          {% elif entry.provider == 'gemini' %}bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
+          {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400{% endif %}">
+          {{ entry.provider }}
+        </span>
+      </td>
+      <td class="px-4 py-3 text-right">
+        {% set score = entry.best_avg_score %}
+        {% include "partials/_score_badge.html" %}
+      </td>
+      <td class="px-4 py-3 text-right">
+        {% set score = entry.latest_avg_score %}
+        {% include "partials/_score_badge.html" %}
+      </td>
+      <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
+        {{ entry.avg_tokens_per_second or "—" }}
+      </td>
+      <td class="px-4 py-3 text-right">{{ entry.total_runs }}</td>
+      <td class="px-4 py-3 text-right">
+        {% if entry.best_run_id %}
+          <a href="/run/{{ entry.best_run_id }}"
+             class="text-blue-600 dark:text-blue-400 hover:underline text-xs">Best run</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="bg-white dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 text-center">
+  <p class="text-gray-500 dark:text-gray-400">No benchmark data yet. Start a run to populate the leaderboard.</p>
+</div>
+{% endif %}

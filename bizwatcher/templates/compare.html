@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Compare — bizantine-watcher{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Compare Runs</h1>
+
+<!-- Run selector -->
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 mb-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Run A</label>
+      <select id="select-a"
+              class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Select a run...</option>
+        {% for run in runs %}
+          <option value="{{ run.model_slug }}/{{ run.run_id }}"
+                  {% if comparison and comparison.slug_a == run.model_slug and comparison.run_a == run.run_id %}selected{% endif %}>
+            {{ run.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Run B</label>
+      <select id="select-b"
+              class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Select a run...</option>
+        {% for run in runs %}
+          <option value="{{ run.model_slug }}/{{ run.run_id }}"
+                  {% if comparison and comparison.slug_b == run.model_slug and comparison.run_b == run.run_id %}selected{% endif %}>
+            {{ run.label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <button onclick="doCompare()"
+          class="mt-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-1.5 rounded-md transition-colors">
+    Compare
+  </button>
+</div>
+
+{% if comparison %}
+<!-- Comparison headers -->
+<div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+    <span class="text-blue-700 dark:text-blue-400 font-semibold">A: {{ comparison.meta_a.model }}</span>
+    <span class="text-blue-500 dark:text-blue-500 ml-2">{{ comparison.meta_a.run_id }}</span>
+  </div>
+  <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+    <span class="text-purple-700 dark:text-purple-400 font-semibold">B: {{ comparison.meta_b.model }}</span>
+    <span class="text-purple-500 dark:text-purple-500 ml-2">{{ comparison.meta_b.run_id }}</span>
+  </div>
+</div>
+
+<!-- Comparison table -->
+<div class="overflow-x-auto">
+  <table class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm text-sm">
+    <thead class="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase text-xs">
+      <tr>
+        <th class="px-4 py-3 text-left">Test ID</th>
+        <th class="px-4 py-3 text-right text-blue-600 dark:text-blue-400">Score A</th>
+        <th class="px-4 py-3 text-right text-purple-600 dark:text-purple-400">Score B</th>
+        <th class="px-4 py-3 text-right text-blue-600 dark:text-blue-400">Time A</th>
+        <th class="px-4 py-3 text-right text-purple-600 dark:text-purple-400">Time B</th>
+        <th class="px-4 py-3 text-center">Winner</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for row in comparison.rows %}
+      <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors
+                 {% if row.winner == 'a' %}bg-blue-50/30 dark:bg-blue-900/10
+                 {% elif row.winner == 'b' %}bg-purple-50/30 dark:bg-purple-900/10{% endif %}">
+        <td class="px-4 py-3 font-mono">{{ row.test_id }}</td>
+        <td class="px-4 py-3 text-right">
+          {% if row.score_a is not none %}
+            {% set score = row.score_a %}
+            {% include "partials/_score_badge.html" %}
+          {% else %}
+            <span class="text-gray-400">—</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right">
+          {% if row.score_b is not none %}
+            {% set score = row.score_b %}
+            {% include "partials/_score_badge.html" %}
+          {% else %}
+            <span class="text-gray-400">—</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.elapsed_a if row.elapsed_a is not none else "—" }}s</td>
+        <td class="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{{ row.elapsed_b if row.elapsed_b is not none else "—" }}s</td>
+        <td class="px-4 py-3 text-center">
+          {% if row.winner == 'a' %}
+            <span class="text-blue-600 dark:text-blue-400 font-semibold text-xs">A</span>
+          {% elif row.winner == 'b' %}
+            <span class="text-purple-600 dark:text-purple-400 font-semibold text-xs">B</span>
+          {% elif row.score_a is not none and row.score_b is not none %}
+            <span class="text-gray-400 text-xs">Tie</span>
+          {% else %}
+            <span class="text-gray-300 dark:text-gray-600">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+function doCompare() {
+  const a = document.getElementById('select-a').value;
+  const b = document.getElementById('select-b').value;
+  if (!a || !b) return alert('Select both runs');
+  if (a === b) return alert('Select two different runs');
+  window.location.href = '/compare/' + a + '/' + b;
+}
+</script>
+{% endblock %}

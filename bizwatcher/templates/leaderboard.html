@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — bizantine-watcher{% endblock %}
+{% block nav_leaderboard %}text-white font-semibold{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">Leaderboard</h1>
+  <a href="/api/export/leaderboard/csv"
+     class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+    Export CSV
+  </a>
+</div>
+
+<div id="leaderboard-table">
+  {% include "partials/_leaderboard_table.html" %}
+</div>
+{% endblock %}

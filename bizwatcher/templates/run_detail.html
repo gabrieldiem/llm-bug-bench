@@ -27,6 +27,10 @@
       Judge All
     </button>
     {% endif %}
+    <a href="/api/export/{{ model_slug }}/{{ meta.run_id }}/csv"
+       class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">CSV</a>
+    <a href="/api/export/{{ model_slug }}/{{ meta.run_id }}/markdown"
+       class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm transition-colors">Markdown</a>
   </div>
 </div>
 
