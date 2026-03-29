@@ -86,8 +86,20 @@ class OllamaModel:
 
 
 @dataclass(frozen=True, slots=True)
+class LlamaCppServerInfo:
+    """Runtime information from a llama.cpp server instance."""
+
+    server_url: str
+    health_status: str
+    model_name: str
+    total_slots: int
+    idle_slots: int
+    ctx_size: int
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderConfig:
-    """Connection details for an LLM provider (Ollama, OpenAI, or Gemini)."""
+    """Connection details for an LLM provider (Ollama, OpenAI, Gemini, or llama.cpp)."""
 
     provider: str
     api_url: str

@@ -63,7 +63,7 @@ def estimate_cost(
     completion_tokens: int | None,
 ) -> float | None:
     """Return estimated USD cost, 0.0 for Ollama, None if pricing unknown."""
-    if provider == "ollama":
+    if provider in ("ollama", "llamacpp"):
         return 0.0
     if prompt_tokens is None and completion_tokens is None:
         return None

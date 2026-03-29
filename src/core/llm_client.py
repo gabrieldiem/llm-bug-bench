@@ -207,4 +207,11 @@ def create_client_from_config(config: ProviderConfig, **kwargs) -> LLMClient:
             api_key=config.api_key,
             **kwargs,
         )
+    if config.provider == "llamacpp":
+        return LLMClient(
+            api_url=f"{config.api_url}/v1",
+            model=config.model,
+            api_key="llamacpp",
+            **kwargs,
+        )
     raise ProviderError(f"Unknown provider: {config.provider}")

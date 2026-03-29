@@ -23,6 +23,7 @@ from ...core.pricing import estimate_cost
 from ...core.runner import DEFAULT_SYSTEM_PROMPT, run_batch, run_with_config
 from ...models import ProviderConfig, RunConfig
 from ..dependencies import (
+    get_llamacpp_url,
     get_ollama_url,
     get_results_dir,
     get_task_manager,
@@ -72,6 +73,7 @@ async def handle_new_run_form(
     request: Request,
     benchmarks_dir: str = Depends(get_benchmarks_dir),
     ollama_url: str = Depends(get_ollama_url),
+    llamacpp_url: str = Depends(get_llamacpp_url),
 ):
     """Render the new run configuration form."""
     templates = request.app.state.templates
@@ -81,6 +83,7 @@ async def handle_new_run_form(
             "request": request,
             "default_system_prompt": DEFAULT_SYSTEM_PROMPT,
             "ollama_url": ollama_url,
+            "llamacpp_url": llamacpp_url,
         },
     )
 
@@ -223,6 +226,7 @@ async def api_start_run(
     results_dir: str = Depends(get_results_dir),
     benchmarks_dir: str = Depends(get_benchmarks_dir),
     ollama_url: str = Depends(get_ollama_url),
+    llamacpp_url: str = Depends(get_llamacpp_url),
 ):
     """Start a benchmark run as a background task. Returns task_id for SSE tracking."""
     body = await request.json()
@@ -238,6 +242,8 @@ async def api_start_run(
 
     if provider == "ollama":
         api_url = api_url or f"{ollama_url}/v1"
+    elif provider == "llamacpp":
+        api_url = api_url or llamacpp_url
     elif provider == "openai":
         api_url = "https://api.openai.com/v1"
         if not api_key:

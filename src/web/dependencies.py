@@ -25,3 +25,8 @@ def get_task_manager(request: Request) -> TaskManager:
 def get_ollama_url(request: Request) -> str:
     """Return the current Ollama base URL (may be overridden at runtime)."""
     return request.app.state.ollama_url
+
+
+def get_llamacpp_url(request: Request) -> str:
+    """Return the current llama.cpp server URL (may be overridden at runtime)."""
+    return request.app.state.llamacpp_url

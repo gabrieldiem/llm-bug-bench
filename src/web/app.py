@@ -34,6 +34,7 @@ def create_app(
     app.state.results_dir = results_dir
     app.state.benchmarks_dir = benchmarks_dir
     app.state.ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    app.state.llamacpp_url = os.environ.get("LLAMACPP_URL", "http://localhost:8095")
     app.state.task_manager = TaskManager()
 
     templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
@@ -45,6 +46,7 @@ def create_app(
         export,
         judge,
         leaderboard,
+        llamacpp,
         ollama,
         runs,
         tests,
@@ -53,6 +55,7 @@ def create_app(
     app.include_router(dashboard.router)
     app.include_router(runs.router)
     app.include_router(ollama.router)
+    app.include_router(llamacpp.router)
     app.include_router(tests.router)
     app.include_router(judge.router)
     app.include_router(leaderboard.router)
@@ -60,9 +63,10 @@ def create_app(
     app.include_router(compare.router)
 
     logger.info(
-        "App created: results_dir=%s benchmarks_dir=%s ollama_url=%s",
+        "App created: results_dir=%s benchmarks_dir=%s ollama_url=%s llamacpp_url=%s",
         results_dir,
         benchmarks_dir,
         app.state.ollama_url,
+        app.state.llamacpp_url,
     )
     return app

@@ -273,8 +273,9 @@ def run_batch(
     results_dir: str,
     task_id: str,
     progress_cb: Callable[[RunProgress], None] | None = None,
+    provider: str = "ollama",
 ) -> None:
-    """Run benchmarks against multiple Ollama models sequentially.
+    """Run benchmarks against multiple models sequentially.
 
     Each model's results are saved independently. One failure does not abort
     the rest. A final 'completed' event is emitted after all models finish.
@@ -286,7 +287,7 @@ def run_batch(
     for idx, model in enumerate(models, 1):
         config = RunConfig(
             provider_config=ProviderConfig(
-                provider="ollama",
+                provider=provider,
                 api_url=api_url,
                 api_key="",
                 model=model,

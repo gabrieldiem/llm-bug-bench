@@ -23,6 +23,10 @@ class OllamaConnectionError(ProviderError):
     """Raised when the Ollama API is unreachable."""
 
 
+class LlamaCppConnectionError(ProviderError):
+    """Raised when the llama.cpp server is unreachable."""
+
+
 class JudgeParseError(BenchmarkError):
     """Raised when the judge response cannot be parsed as JSON."""
 

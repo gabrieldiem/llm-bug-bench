@@ -1,0 +1,46 @@
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-400">
+  {{ error }}
+</div>
+{% elif info %}
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+  <div class="flex items-center gap-3 mb-4">
+    <h2 class="text-sm font-semibold uppercase text-gray-500 dark:text-gray-400">Server Status</h2>
+    {% if info.health_status == "ok" %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">ok</span>
+    {% elif info.health_status == "loading model" %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">loading model</span>
+    {% elif info.health_status == "no slot available" %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">no slot available</span>
+    {% else %}
+    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">{{ info.health_status }}</span>
+    {% endif %}
+    <button onclick="htmx.ajax('GET', '/api/llamacpp/status', {target: '#server-status'})"
+            class="ml-auto text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+      Refresh
+    </button>
+  </div>
+  <div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+    <div class="flex justify-between">
+      <span>Model</span>
+      <span class="font-mono font-semibold text-gray-800 dark:text-gray-200">{{ info.model_name }}</span>
+    </div>
+    <div class="flex justify-between">
+      <span>Context Size</span>
+      <span class="font-semibold text-gray-800 dark:text-gray-200">{{ info.ctx_size }}</span>
+    </div>
+    <div class="flex justify-between">
+      <span>Slots</span>
+      <span class="font-semibold text-gray-800 dark:text-gray-200">{{ info.idle_slots }} idle / {{ info.total_slots }} total</span>
+    </div>
+    <div class="flex justify-between">
+      <span>Server URL</span>
+      <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ info.server_url }}</span>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center text-gray-400 dark:text-gray-500 text-sm">
+  No server info available. Check the server URL and ensure llama-server is running.
+</div>
+{% endif %}
