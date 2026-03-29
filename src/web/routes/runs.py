@@ -159,6 +159,9 @@ def handle_run_detail(
     key_fn = key_map.get(sort, key_map["test_id"])
     rows.sort(key=key_fn, reverse=(order == "desc"))
 
+    scored = [r["score"] for r in rows if r["score"] is not None]
+    avg_score = round(sum(scored) / len(scored), 1) if scored else None
+
     is_htmx = request.headers.get("HX-Request") == "true"
     template = "partials/_run_table.html" if is_htmx else "run_detail.html"
 
@@ -171,6 +174,7 @@ def handle_run_detail(
             "rows": rows,
             "model_slug": model_slug,
             "has_unjudged": any(r["score"] is None for r in rows),
+            "avg_score": avg_score,
             "sort": sort,
             "order": order,
             "run_tokens": run_tokens,
@@ -278,7 +282,8 @@ async def api_start_run(
     async def _run():
         await asyncio.to_thread(run_with_config, config, task_id, progress_cb)
 
-    task_manager.submit(task_id, _run())
+    entry = task_manager.submit(task_id, _run())
+    entry.meta["model_slug"] = model
 
     return JSONResponse({"task_id": task_id})
 
@@ -313,6 +318,7 @@ async def api_run_progress(
                     payload["total_tests"] = last_progress.total_tests
                     payload["current_test"] = last_progress.current_test
                     payload["run_id"] = last_progress.run_id
+                payload["model_slug"] = entry.meta.get("model_slug", "")
                 yield f"data: {json.dumps(payload)}\n\n"
                 break
 

@@ -118,9 +118,9 @@
                 bar.classList.add('bg-green-500');
                 doneEl.classList.remove('hidden');
 
-                if (data.run_id) {
-                  linkEl.href = '/';
-                }
+                const slug = data.model_slug || '';
+                const runId = data.run_id || '';
+                linkEl.href = (slug && runId) ? '/run/' + slug + '/' + runId : '/';
                 if (data.message) msgEl.textContent = data.message;
                 const total = data.total_tests ?? lastTotal;
                 countEl.textContent = total + ' / ' + total;

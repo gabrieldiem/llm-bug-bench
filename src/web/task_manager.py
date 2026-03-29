@@ -23,6 +23,7 @@ class TaskEntry:
     history: list[RunProgress] = field(default_factory=list)
     subscribers: list[asyncio.Queue[RunProgress | None]] = field(default_factory=list)
     done: bool = False
+    meta: dict[str, Any] = field(default_factory=dict)
 
 
 class TaskManager:
