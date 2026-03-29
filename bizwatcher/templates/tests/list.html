@@ -116,6 +116,9 @@ function deleteTest(id) {
       if (data.ok) {
         const row = document.getElementById('test-row-' + id);
         if (row) row.remove();
+        showToast('Test "' + id + '" deleted', 'info');
+      } else if (data.error) {
+        showToast(data.error, 'error');
       }
     });
 }

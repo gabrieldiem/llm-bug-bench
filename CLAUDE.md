@@ -2,57 +2,82 @@
 
 ## Project Overview
 
-`bizantine-watcher` — Benchmark suite evaluating local LLMs' bug-detection ability. Sends buggy code to OpenAI-compatible APIs (Ollama, vLLM, LM Studio, llama.cpp), measures detection accuracy and speed.
+`bizantine-watcher` — Web-based benchmark suite evaluating LLMs' bug-detection ability. Supports Ollama (local), OpenAI, and Gemini providers. Measures detection accuracy via LLM judge scoring and speed via tok/s. Full web UI with HTMX + Tailwind CSS + dark mode.
 
 ## Commands
 
 ```bash
-# Docker (recommended)
-make run MODEL=llama3:8b API_URL=http://localhost:11434/v1
-make run MODEL=llama3:8b TAGS=deadlock,retry
-
-# Local
+# Start the web UI (main entry point)
 poetry install
-make run-local MODEL=llama3:8b
-python -m bizwatcher run --api-url http://localhost:11434/v1 --model llama3:8b
+python -m bizwatcher                          # default port 8080
+python -m bizwatcher --port 3000              # custom port
+python -m bizwatcher --results-dir ./results --tests-dir ./tests
 
-# Judge (requires OPENAI_API_KEY)
-export OPENAI_API_KEY=sk-...
-python -m bizwatcher judge --run-dir results/llama3_8b/run_001 --tests-dir tests
-
-# Web UI
+# Make shortcuts
 make serve PORT=8080
-python -m bizwatcher serve --port 8080
-
-# Utils
-make build      # build image
-make results    # print summary
+make build      # build Docker image
 make clean      # delete results
+make results    # print summary
 make precommit  # run black formatter, mypy type checking and pylint static checking
 ```
 
 If you want to run a bare command run it with the virtual env: "source .venv/bin/activate && cmd"
 
-**Subcommands:** `run`, `judge`, `serve`
+**CLI args:** `--port` (8080), `--results-dir` (./results), `--tests-dir` (./tests)
 
-**run args:** `--api-url`, `--model`, `--tests-dir`, `--results-dir`, `--temperature` (0.1), `--max-tokens` (2048), `--tags`, `--system-prompt`, `--think`, `--debug`
-
-**judge args:** `--run-dir`, `--tests-dir`, `--judge-model` (gpt-5.2-chat-latest)
-
-**serve args:** `--port` (8080), `--results-dir` (./results)
+**Env vars:** `PORT`, `RESULTS_DIR`, `TESTS_DIR`, `OLLAMA_URL` (http://localhost:11434), `OPENAI_API_KEY`
 
 ## Architecture
 
-`__main__.py` → `runner.py` → `client.py` / `loader.py` / `results.py` / `metrics.py`
+```
+__main__.py → web/app.py → web/routes/*.py
+                          → core/runner.py → core/llm_client.py / core/loader.py / core/results.py
+                          → core/judge.py
+                          → core/ollama_manager.py
+                          → core/leaderboard.py
+```
 
-| Module | Purpose |
-|--------|---------|
-| `runner.py` | Core loop: load tests → create versioned run dir → query LLM → save JSON |
-| `client.py` | OpenAI SDK wrapper for any compatible endpoint |
-| `loader.py` | Discovers `.yaml` tests recursively; tag filtering (OR logic) |
-| `models.py` | Dataclasses: `TestCase`, `TestResult`, `RunMetadata` |
-| `results.py` | Output dirs at `results/<model>/run_NNN/`; sanitizes names |
-| `metrics.py` | Computes tokens/second |
+| Package | Module | Purpose |
+|---------|--------|---------|
+| `core/` | `runner.py` | Core loop: load tests, query LLM, save JSON results |
+| `core/` | `llm_client.py` | OpenAI SDK wrapper + Ollama native streaming + multi-provider factory |
+| `core/` | `llm_protocol.py` | `LLMClientProtocol` for DI |
+| `core/` | `judge.py` | LLM-based scoring (1-20 rubric) via OpenAI |
+| `core/` | `loader.py` | YAML test discovery + CRUD (save/update/delete) |
+| `core/` | `results.py` | JSON persistence at `results/<model>/run_NNN/` |
+| `core/` | `ollama_manager.py` | Async Ollama REST API (list/pull/delete/show models) |
+| `core/` | `leaderboard.py` | Aggregate scores across runs per model |
+| `web/` | `app.py` | FastAPI app factory, DI setup |
+| `web/` | `task_manager.py` | Background asyncio tasks with SSE progress queues |
+| `web/` | `dependencies.py` | FastAPI `Depends` providers |
+| `web/routes/` | `dashboard.py` | `GET /` main dashboard |
+| `web/routes/` | `runs.py` | Run detail, new run form, SSE progress, delete |
+| `web/routes/` | `tests.py` | Test CRUD routes |
+| `web/routes/` | `ollama.py` | Ollama model management |
+| `web/routes/` | `judge.py` | Trigger judging from UI with SSE progress |
+| `web/routes/` | `leaderboard.py` | Sortable leaderboard |
+| `web/routes/` | `export.py` | CSV/Markdown export |
+| `web/routes/` | `compare.py` | Side-by-side run comparison |
+| — | `models.py` | Frozen dataclasses: `TestCase`, `TestResult`, `RunMetadata`, `JudgeResult`, `OllamaModel`, `ProviderConfig`, `RunConfig`, `RunProgress`, `LeaderboardEntry` |
+| — | `exceptions.py` | Domain exceptions |
+| — | `metrics.py` | Computes tokens/second |
+
+## Web UI Pages
+
+| Path | Description |
+|------|-------------|
+| `/` | Dashboard: all runs with stats |
+| `/leaderboard` | Sortable model leaderboard (score, speed, runs) |
+| `/runs/new` | Start a run (Ollama/OpenAI/Gemini provider selector) |
+| `/runs/progress/{task_id}` | SSE progress tracking |
+| `/run/{model}/{run_id}` | Run detail with test results table |
+| `/run/{model}/{run_id}/{test_id}` | Test result + judge evaluation |
+| `/tests` | Test case browser with filters |
+| `/tests/new` | Create test case |
+| `/tests/{test_id}/edit` | Edit test case |
+| `/tests/{test_id}` | View test case definition |
+| `/ollama` | Model management (list/pull/delete) |
+| `/compare` | Side-by-side run comparison |
 
 ## Test Cases
 
@@ -62,15 +87,14 @@ YAML files in `tests/`, auto-discovered. Fields: `id`, `title`, `language`, `tag
 
 ## Dependencies
 
-Python 3.13+, Poetry, `openai>=2.30.0`, `pyyaml>=6.0.3`, Docker + local LLM server.
+Python 3.13+, Poetry, `openai`, `pyyaml`, `python-dotenv`, `fastapi`, `uvicorn`, `jinja2`, `httpx`, `python-multipart`.
 
 ---
 
 ## Collaboration Protocol
 
-1. **Before coding**: Describe approach → wait for approval. Ask if requirements are ambiguous.
-2. **>3 file changes**: Stop. Break into smaller tasks.
-3. **After coding**: List what could break and which tests need adding.
+1. **Before coding**: Describe approach, wait for approval. Ask if requirements are ambiguous.
+2. **After coding**: List what could break and which tests need adding.
 
 ## Code Style
 
@@ -97,13 +121,13 @@ Python 3.13+, Poetry, `openai>=2.30.0`, `pyyaml>=6.0.3`, Docker + local LLM serv
 
 - Stream large files (generators); context managers for cleanup.
 - Bounded buffers: limit concurrent ops.
-- `concurrent.futures.ThreadPoolExecutor` for blocking I/O.
+- `asyncio.to_thread()` for blocking I/O in async context.
 - Batch small operations; lazy evaluation for expensive computations.
 
 ## Anti-Patterns
 
-- ❌ God objects, circular deps, global mutable state
-- ❌ Mixing business logic with infrastructure
-- ❌ Unbounded concurrent task creation
-- ❌ Catching `Exception` without re-raise
-- ❌ Not cleaning up resources in error paths
+- No god objects, circular deps, global mutable state
+- No mixing business logic with infrastructure
+- No unbounded concurrent task creation
+- No catching `Exception` without re-raise
+- No skipping resource cleanup in error paths

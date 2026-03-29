@@ -92,10 +92,12 @@ function pullModel() {
             if (data.status === 'done') {
               progress.classList.add('hidden');
               htmx.ajax('GET', '/api/ollama/models', {target: '#model-list'});
+              showToast('Model pulled successfully', 'success');
               return;
             }
             if (data.status === 'error') {
               status.textContent = 'Error: ' + data.error;
+              showToast('Pull failed: ' + data.error, 'error');
               return;
             }
             bar.style.width = data.percent + '%';
@@ -113,8 +115,10 @@ function deleteModel(name) {
   if (!confirm('Delete model "' + name + '"?')) return;
   fetch('/api/ollama/models/' + encodeURIComponent(name), {method: 'DELETE'})
     .then(r => r.json())
-    .then(() => {
+    .then(data => {
       htmx.ajax('GET', '/api/ollama/models', {target: '#model-list'});
+      if (data.ok) showToast('Model "' + name + '" deleted', 'info');
+      else if (data.error) showToast('Delete failed: ' + data.error, 'error');
     });
 }
 </script>
