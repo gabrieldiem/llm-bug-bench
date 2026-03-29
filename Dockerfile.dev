@@ -1,0 +1,21 @@
+################################
+# Development image — code is volume-mounted
+################################
+FROM python:3.13-slim-trixie
+
+WORKDIR /app
+
+COPY pyproject.toml poetry.lock /app/
+
+RUN pip install --no-cache-dir poetry && poetry config virtualenvs.create false
+
+RUN (poetry check --lock || poetry lock) && poetry install --no-root --no-ansi
+
+# Source code is mounted as a volume — no COPY needed
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
+
+CMD ["python", "-m", "src", "--port", "8080", "--reload"]

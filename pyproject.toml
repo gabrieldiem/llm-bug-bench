@@ -25,6 +25,12 @@ pylint = "^4.0.5"
 mypy = "^1.19.1"
 black = "^26.3.1"
 pre-commit = "^4.5.1"
+pytest = "^8.0"
+pytest-cov = "^6.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["skip: skip this test"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

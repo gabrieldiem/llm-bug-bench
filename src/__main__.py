@@ -49,19 +49,35 @@ def main() -> None:
         default=False,
         help="Enable debug logging",
     )
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        default=False,
+        help="Enable uvicorn auto-reload (for development)",
+    )
 
     args = parser.parse_args()
     _configure_logging(args.debug)
 
     import uvicorn
 
-    from .web.app import create_app
+    if args.reload:
+        uvicorn.run(
+            "src.web.app:create_app",
+            factory=True,
+            host="0.0.0.0",
+            port=args.port,
+            reload=True,
+            reload_dirs=["src"],
+        )
+    else:
+        from .web.app import create_app
 
-    app = create_app(
-        results_dir=args.results_dir,
-        tests_dir=args.tests_dir,
-    )
-    uvicorn.run(app, host="0.0.0.0", port=args.port)
+        app = create_app(
+            results_dir=args.results_dir,
+            tests_dir=args.tests_dir,
+        )
+        uvicorn.run(app, host="0.0.0.0", port=args.port)
 
 
 if __name__ == "__main__":

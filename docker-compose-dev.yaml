@@ -1,14 +1,15 @@
 services:
   llm-bug-bench:
-    container_name: llm-bug-bench
+    container_name: llm-bug-bench-dev
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     network_mode: host
     restart: unless-stopped
     volumes:
-      - ./results:/app/results
+      - ./src:/app/src
       - ./tests:/app/tests
+      - ./results:/app/results
     environment:
       - PORT=${PORT:-8080}
       - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}

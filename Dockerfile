@@ -9,7 +9,7 @@ COPY pyproject.toml poetry.lock /app/
 
 RUN pip install --no-cache-dir poetry && poetry config virtualenvs.create false
 
-RUN (poetry check --lock || poetry lock) && poetry install --no-root --no-ansi
+RUN (poetry check --lock || poetry lock) && poetry install --without dev --no-root --no-ansi
 
 ################################
 # Stage 2: Runtime
@@ -21,11 +21,14 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
+RUN mkdir -p /app/results
+
 COPY src/ src/
 COPY tests/ tests/
 
-RUN mkdir -p /app/results
-VOLUME /app/results
+EXPOSE 8080
 
-ENTRYPOINT ["python", "-m", "src"]
-CMD ["--help"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"
+
+CMD ["python", "-m", "src", "--port", "8080"]

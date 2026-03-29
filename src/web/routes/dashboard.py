@@ -13,6 +13,12 @@ from ..dependencies import get_results_dir
 router = APIRouter()
 
 
+@router.get("/health")
+def health_check():
+    """Liveness probe for Docker healthcheck."""
+    return {"status": "ok"}
+
+
 @router.get("/", response_class=HTMLResponse)
 def handle_dashboard(
     request: Request,
