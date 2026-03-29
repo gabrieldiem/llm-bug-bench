@@ -1,22 +1,41 @@
 """CLI entry point — starts the FastAPI web server."""
 
 import argparse
-import logging
 import os
 
 from dotenv import load_dotenv
 
 
-def _configure_logging(debug: bool) -> None:
-    """Set up root logger and suppress noisy third-party loggers."""
-    level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    for noisy in ("uvicorn.access", "httpx", "httpcore", "openai"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
+def _build_log_config(debug: bool) -> dict:
+    """Build a dictConfig-compatible log config to pass to uvicorn."""
+    level = "DEBUG" if debug else "INFO"
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s %(levelname)-8s %(name)s — %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            },
+        },
+        "handlers": {
+            "default": {
+                "class": "logging.StreamHandler",
+                "formatter": "default",
+                "stream": "ext://sys.stderr",
+            },
+        },
+        "root": {
+            "level": level,
+            "handlers": ["default"],
+        },
+        "loggers": {
+            "uvicorn.access": {"level": "WARNING"},
+            "httpx": {"level": "WARNING"},
+            "httpcore": {"level": "WARNING"},
+            "openai": {"level": "WARNING"},
+        },
+    }
 
 
 def main() -> None:
@@ -57,7 +76,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    _configure_logging(args.debug)
+    log_config = _build_log_config(args.debug)
 
     import uvicorn
 
@@ -69,6 +88,7 @@ def main() -> None:
             port=args.port,
             reload=True,
             reload_dirs=["src"],
+            log_config=log_config,
         )
     else:
         from .web.app import create_app
@@ -77,7 +97,7 @@ def main() -> None:
             results_dir=args.results_dir,
             benchmarks_dir=args.benchmarks_dir,
         )
-        uvicorn.run(app, host="0.0.0.0", port=args.port)
+        uvicorn.run(app, host="0.0.0.0", port=args.port, log_config=log_config)
 
 
 if __name__ == "__main__":
