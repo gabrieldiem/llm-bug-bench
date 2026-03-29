@@ -65,18 +65,32 @@
 
   <!-- llama.cpp-specific fields -->
   <div id="llamacpp-fields" class="hidden">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <!-- Single model input (shown when batch mode is off) -->
+      <div id="llamacpp-single-model-field">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model Name *</label>
         <input id="run-llamacpp-model" type="text" list="llamacpp-models" placeholder="Model loaded on server"
                class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
         <datalist id="llamacpp-models"></datalist>
+      </div>
+      <!-- Batch models textarea (shown when batch mode is on) -->
+      <div id="llamacpp-batch-models-field" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Models (one per line) *</label>
+        <textarea id="run-llamacpp-batch-models" rows="4" placeholder="unsloth/Qwen2.5-Coder-7B-Instruct-128K-GGUF:Q4_K_M&#10;unsloth/Qwen3.5-9B-GGUF:Q4_K_M"
+                  class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Server URL</label>
         <input id="run-llamacpp-url" type="text" value="{{ llamacpp_url }}"
                class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
       </div>
+    </div>
+    <!-- Batch mode toggle -->
+    <div class="mb-5">
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <input id="llamacpp-batch-mode" type="checkbox" onchange="toggleLlamaCppBatchMode()" class="rounded border-gray-300 dark:border-gray-600">
+        Batch Mode <span class="text-gray-400 dark:text-gray-500 font-normal">(run multiple models sequentially)</span>
+      </label>
     </div>
   </div>
 
@@ -217,23 +231,40 @@ function toggleBatchMode() {
   document.getElementById('start-btn').textContent = isBatch ? 'Start Batch Run' : 'Start Run';
 }
 
+function toggleLlamaCppBatchMode() {
+  const isBatch = document.getElementById('llamacpp-batch-mode').checked;
+  document.getElementById('llamacpp-single-model-field').classList.toggle('hidden', isBatch);
+  document.getElementById('llamacpp-batch-models-field').classList.toggle('hidden', !isBatch);
+  document.getElementById('start-btn').textContent = isBatch ? 'Start Batch Run' : 'Start Run';
+}
+
 function startRun() {
   const errorEl = document.getElementById('start-error');
   errorEl.classList.add('hidden');
 
-  const isBatch = currentProvider === 'ollama' && document.getElementById('batch-mode').checked;
+  const ollamaBatch = currentProvider === 'ollama' && document.getElementById('batch-mode').checked;
+  const llamacppBatch = currentProvider === 'llamacpp' && document.getElementById('llamacpp-batch-mode').checked;
+  const isBatch = ollamaBatch || llamacppBatch;
   let api_key = '', api_url = '';
 
   if (isBatch) {
-    api_url = document.getElementById('run-api-url').value.trim();
-    const models = document.getElementById('run-batch-models').value
-      .split('\n').map(s => s.trim()).filter(Boolean);
+    let models;
+    if (ollamaBatch) {
+      api_url = document.getElementById('run-api-url').value.trim();
+      models = document.getElementById('run-batch-models').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+    } else {
+      api_url = document.getElementById('run-llamacpp-url').value.trim();
+      models = document.getElementById('run-llamacpp-batch-models').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+    }
     if (!models.length) {
       errorEl.textContent = 'Enter at least one model name';
       errorEl.classList.remove('hidden');
       return;
     }
     const payload = {
+      provider: currentProvider,
       models: models,
       api_url: api_url,
       temperature: parseFloat(document.getElementById('run-temperature').value),

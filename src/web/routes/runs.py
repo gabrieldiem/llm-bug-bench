@@ -301,22 +301,32 @@ async def api_start_batch_run(
     results_dir: str = Depends(get_results_dir),
     benchmarks_dir: str = Depends(get_benchmarks_dir),
     ollama_url: str = Depends(get_ollama_url),
+    llamacpp_url: str = Depends(get_llamacpp_url),
 ):
-    """Start a batch run against multiple Ollama models sequentially. Returns task_id."""
+    """Start a batch run against multiple models sequentially. Returns task_id."""
     body = await request.json()
     models = [m.strip() for m in body.get("models", []) if str(m).strip()]
+    provider = body.get("provider", "ollama")
 
     if not models:
         return JSONResponse(
             {"error": "At least one model is required"}, status_code=400
         )
 
-    api_url = body.get("api_url", "") or f"{ollama_url}/v1"
+    if provider == "llamacpp":
+        api_url = body.get("api_url", "") or llamacpp_url
+    else:
+        api_url = body.get("api_url", "") or f"{ollama_url}/v1"
 
     task_id = task_manager.create_task_id()
     progress_cb = task_manager.make_progress_callback(task_id)
 
-    logger.info("Batch run started: models=%s task_id=%s", models, task_id)
+    logger.info(
+        "Batch run started: provider=%s models=%s task_id=%s",
+        provider,
+        models,
+        task_id,
+    )
 
     async def _run():
         await asyncio.to_thread(
@@ -330,6 +340,7 @@ async def api_start_batch_run(
             results_dir,
             task_id,
             progress_cb,
+            provider,
         )
 
     task_manager.submit(task_id, _run())
