@@ -1,10 +1,7 @@
 services:
-  bizwatcher:
+  llm-bug-bench:
     build: .
     network_mode: host
     volumes:
       - ./results:/app/results
       - ./tests:/app/tests
-    command: >
-      --api-url http://localhost:11434/v1
-      --model llama3:8b

@@ -2,16 +2,16 @@
 
 ## Project Overview
 
-`bizantine-watcher` — Web-based benchmark suite evaluating LLMs' bug-detection ability. Supports Ollama (local), OpenAI, and Gemini providers. Measures detection accuracy via LLM judge scoring and speed via tok/s. Full web UI with HTMX + Tailwind CSS + dark mode.
+`llm-bug-bench` — Web-based benchmark suite evaluating LLMs' bug-detection ability. Supports Ollama (local), OpenAI, and Gemini providers. Measures detection accuracy via LLM judge scoring and speed via tok/s. Full web UI with HTMX + Tailwind CSS + dark mode. Source code lives in `src/`.
 
 ## Commands
 
 ```bash
 # Start the web UI (main entry point)
 poetry install
-python -m bizwatcher                          # default port 8080
-python -m bizwatcher --port 3000              # custom port
-python -m bizwatcher --results-dir ./results --tests-dir ./tests
+python -m src                          # default port 8080
+python -m src --port 3000              # custom port
+python -m src --results-dir ./results --tests-dir ./tests
 
 # Make shortcuts
 make serve PORT=8080

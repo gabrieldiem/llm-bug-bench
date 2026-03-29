@@ -1,7 +1,7 @@
 [project]
-name = "bizantine-watcher"
+name = "llm-bug-bench"
 version = "0.1.0"
-description = ""
+description = "Benchmark suite that evaluates how well LLMs detect bugs in code"
 authors = [
     { name = "gabrieldiem", email = "gabriel.diem5@gmail.com" },
 ]

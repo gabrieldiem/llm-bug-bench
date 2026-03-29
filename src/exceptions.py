@@ -1,21 +1,21 @@
-"""Domain exceptions for the bizantine-watcher application."""
+"""Domain exceptions for the llm-bug-bench application."""
 
 from __future__ import annotations
 
 
-class BizWatcherError(Exception):
-    """Base exception for all bizantine-watcher errors."""
+class BenchmarkError(Exception):
+    """Base exception for all llm-bug-bench errors."""
 
 
-class TestNotFoundError(BizWatcherError):
+class TestNotFoundError(BenchmarkError):
     """Raised when a test case ID cannot be found."""
 
 
-class RunNotFoundError(BizWatcherError):
+class RunNotFoundError(BenchmarkError):
     """Raised when a run directory cannot be found."""
 
 
-class ProviderError(BizWatcherError):
+class ProviderError(BenchmarkError):
     """Raised for LLM provider configuration errors."""
 
 
@@ -23,9 +23,9 @@ class OllamaConnectionError(ProviderError):
     """Raised when the Ollama API is unreachable."""
 
 
-class JudgeParseError(BizWatcherError):
+class JudgeParseError(BenchmarkError):
     """Raised when the judge response cannot be parsed as JSON."""
 
 
-class DuplicateTestIdError(BizWatcherError):
+class DuplicateTestIdError(BenchmarkError):
     """Raised when creating a test case with an ID that already exists."""

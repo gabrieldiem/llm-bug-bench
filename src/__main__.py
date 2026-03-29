@@ -24,8 +24,8 @@ def main() -> None:
     load_dotenv()
 
     parser = argparse.ArgumentParser(
-        prog="bizwatcher",
-        description="Byzantine Watcher — LLM bug-detection benchmark suite",
+        prog="llm-bug-bench",
+        description="LLM Bug Detection Benchmark Suite",
     )
     parser.add_argument(
         "--port",

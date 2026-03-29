@@ -29,7 +29,7 @@ def create_app(
     Returns:
         Configured FastAPI app with all routers registered.
     """
-    app = FastAPI(title="bizantine-watcher")
+    app = FastAPI(title="llm-bug-bench")
 
     app.state.results_dir = results_dir
     app.state.tests_dir = tests_dir

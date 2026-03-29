@@ -18,7 +18,7 @@ help:
 	@echo "  TESTS_DIR=$(TESTS_DIR)"
 
 serve:
-	python -m bizwatcher --port $(PORT) --results-dir $(RESULTS_DIR) --tests-dir $(TESTS_DIR)
+	python -m src --port $(PORT) --results-dir $(RESULTS_DIR) --tests-dir $(TESTS_DIR)
 
 build:
 	docker compose build

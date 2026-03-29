@@ -1,4 +1,4 @@
-# bizantine-watcher
+# llm-bug-bench
 
 A web-based benchmark suite that evaluates LLMs' ability to detect bugs in code. Focused on concurrency issues, error handling, and distributed systems patterns in Go and Python, plus theoretical questions (CAP theorem, Byzantine faults).
 
@@ -27,7 +27,7 @@ Supports **Ollama** (local models), **OpenAI**, and **Google Gemini** as provide
 ### Install and run
 
 ```bash
-git clone <repo-url> && cd bizantine-watcher
+git clone <repo-url> && cd llm-bug-bench
 poetry install
 make serve
 ```
@@ -67,7 +67,7 @@ Variables (override on the command line):
 ### CLI arguments
 
 ```
-python -m bizwatcher [OPTIONS]
+python -m src [OPTIONS]
 ```
 
 | Argument        | Default              | Description                 |
@@ -254,7 +254,7 @@ Results are stored as JSON files in `results/<model_name>/run_NNN/`.
 ## Architecture
 
 ```
-bizwatcher/
+src/
 ├── __init__.py
 ├── __main__.py              # Entry point — starts FastAPI server
 ├── models.py                # Frozen dataclasses for all data types
@@ -307,8 +307,8 @@ docker compose build
 docker compose up
 
 # Or manually
-docker build -t bizwatcher .
-docker run --rm --network host -v $(pwd)/results:/app/results -v $(pwd)/tests:/app/tests bizwatcher
+docker build -t llm-bug-bench .
+docker run --rm --network host -v $(pwd)/results:/app/results -v $(pwd)/tests:/app/tests llm-bug-bench
 ```
 
 The container starts the web server on port 8080 by default.
@@ -323,7 +323,7 @@ poetry install
 make precommit
 
 # Start with debug logging
-python -m bizwatcher --debug
+python -m src --debug
 ```
 
 ### Dependencies
