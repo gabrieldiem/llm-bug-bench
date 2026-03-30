@@ -12,7 +12,13 @@
 
 {% if entries %}
 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-5 mb-6">
-  <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Score Comparison</h2>
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Score Comparison</h2>
+    <button id="export-chart-btn"
+            class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+      Download PNG
+    </button>
+  </div>
   <div id="score-chart-wrapper">
     <canvas id="score-chart"></canvas>
   </div>
@@ -25,6 +31,7 @@
 
 {% if entries %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
 (function() {
   const labels = [{% for e in entries %}"{{ e.model }}"{% if not loop.last %},{% endif %}{% endfor %}];
@@ -45,6 +52,8 @@
 
   const wrapper = document.getElementById('score-chart-wrapper');
   wrapper.style.height = Math.max(200, labels.length * 44) + 'px';
+
+  Chart.register(ChartDataLabels);
 
   new Chart(document.getElementById('score-chart'), {
     type: 'bar',
@@ -81,13 +90,38 @@
           grid: { color: gridColor },
         },
         y: {
-          ticks: { color: textColor, font: { family: 'ui-monospace, monospace', size: 12 } },
+          ticks: {
+            color: textColor,
+            font: { family: 'ui-monospace, monospace', size: 14 },
+            callback: function(value, index) {
+              var label = labels[index];
+              var maxLen = 20;
+              if (label.length <= maxLen) return label;
+              var lines = [];
+              while (label.length > maxLen) {
+                var breakAt = label.lastIndexOf('-', maxLen);
+                if (breakAt <= 0) breakAt = label.lastIndexOf(':', maxLen);
+                if (breakAt <= 0) breakAt = maxLen;
+                lines.push(label.substring(0, breakAt + 1));
+                label = label.substring(breakAt + 1);
+              }
+              if (label) lines.push(label);
+              return lines;
+            },
+          },
           grid: { display: false },
         },
       },
       plugins: {
         legend: {
           labels: { color: textColor, boxWidth: 14, padding: 16 },
+        },
+        datalabels: {
+          anchor: 'end',
+          align: 'end',
+          color: textColor,
+          font: { size: 11, weight: 'bold' },
+          formatter: function(v) { return v !== null ? v.toFixed(1) : ''; },
         },
         tooltip: {
           callbacks: {
@@ -103,6 +137,13 @@
         },
       },
     },
+  });
+  document.getElementById('export-chart-btn').addEventListener('click', function() {
+    var canvas = document.getElementById('score-chart');
+    var link = document.createElement('a');
+    link.download = 'leaderboard-scores.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   });
 })();
 </script>
