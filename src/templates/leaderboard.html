@@ -25,6 +25,7 @@
 
 {% if entries %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
 (function() {
   const labels = [{% for e in entries %}"{{ e.model }}"{% if not loop.last %},{% endif %}{% endfor %}];
@@ -45,6 +46,8 @@
 
   const wrapper = document.getElementById('score-chart-wrapper');
   wrapper.style.height = Math.max(200, labels.length * 44) + 'px';
+
+  Chart.register(ChartDataLabels);
 
   new Chart(document.getElementById('score-chart'), {
     type: 'bar',
@@ -88,6 +91,13 @@
       plugins: {
         legend: {
           labels: { color: textColor, boxWidth: 14, padding: 16 },
+        },
+        datalabels: {
+          anchor: 'end',
+          align: 'end',
+          color: textColor,
+          font: { size: 11, weight: 'bold' },
+          formatter: function(v) { return v !== null ? v.toFixed(1) : ''; },
         },
         tooltip: {
           callbacks: {
