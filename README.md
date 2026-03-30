@@ -2,33 +2,32 @@
 
 A web-based benchmark suite that evaluates LLMs' ability to detect bugs in code. Focused on concurrency issues, error handling, and distributed systems patterns in Go and Python, plus theoretical questions (CAP theorem, Byzantine faults).
 
-Supports **Ollama** (local models), **OpenAI**, and **Google Gemini** as providers. Includes an LLM judge that automatically scores responses on a 1–20 rubric, a sortable leaderboard, and full test case management — all through a web UI.
+Supports **Ollama**, **llama.cpp** (local models), **OpenAI**, and **Google Gemini** as providers. Includes an LLM judge that automatically scores responses on a 1–20 rubric, a sortable leaderboard, and full test case management — all through a web UI.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Leaderboard](#leaderboard)
 - [Quick Start](#quick-start)
-- [Makefile Reference](#makefile-reference)
 - [Configuration](#configuration)
-- [Web UI Guide](#web-ui-guide)
 - [Providers](#providers)
 - [LLM Judge](#llm-judge)
 - [Test Suite](#test-suite)
 - [Results Format](#results-format)
 - [Architecture](#architecture)
-- [Docker](#docker)
-- [Development](#development)
 
 ## Features
 
-- **Multi-provider support** — run benchmarks against Ollama, OpenAI, or Gemini from a single interface
+- **Multi-provider support** — run benchmarks against Ollama, OpenAI, Gemini, or llama.cpp from a single interface
+- **Batch running** — queue multiple models for sequential benchmark runs (Ollama and llama.cpp)
 - **Ollama model management** — pull, list, and delete models directly from the UI
+- **Model eviction** — automatically unload models from memory after a test suite run
 - **LLM judge scoring** — automated evaluation with a 1–20 rubric using an OpenAI judge model
+- **Token cost estimation** — estimate API costs per run
 - **Sortable leaderboard** — compare models by score, speed (tok/s), and number of runs
 - **Test case CRUD** — create, edit, and delete YAML test cases from the browser
 - **Run comparison** — side-by-side per-test scoring between any two runs
-- **Export** — download results as CSV or Markdown
+- **Export** — download results as CSV, Markdown, or leaderboard chart as PNG
 - **Dark mode** — toggle with system preference detection
 - **Real-time progress** — SSE streaming for run execution and judge scoring
 
@@ -40,10 +39,9 @@ Horizontal bar chart comparing each model's bug-detection accuracy on a 1–20 r
     <img src="./docs/imgs/leaderboard_latest.png" alt="LLMs leaderboard" height="1700px">
 </p>
 
-
 ### Models tested
 
-| Cloud                 | Local (Ollama)                                                      |
+| Cloud                 | Local (ollama and llama.cpp)                                        |
 | --------------------- | ------------------------------------------------------------------- |
 | gpt-5.4               | qwen3.5:4b                                                          |
 | gpt-5.4-mini          | qwen3.5:2b                                                          |
@@ -76,97 +74,58 @@ Horizontal bar chart comparing each model's bug-detection accuracy on a 1–20 r
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.13+
-- [Poetry](https://python-poetry.org/)
-- [Ollama](https://ollama.com) running locally (for local models)
-
-### Install and run
+**Prerequisites:** Python 3.13+, [Poetry](https://python-poetry.org/), [Ollama](https://ollama.com) (for local models)
 
 ```bash
 git clone <repo-url> && cd llm-bug-bench
 poetry install
-make serve
+make up            # dev with hot-reload
 ```
 
-Open [http://localhost:8080](http://localhost:8080) in your browser.
-
-## Makefile Reference
-
-| Target           | Description                          |
-| ---------------- | ------------------------------------ |
-| `make serve`     | Start the web UI (default port 8080) |
-| `make build`     | Build the Docker image               |
-| `make clean`     | Delete all results                   |
-| `make results`   | Print a summary of all saved runs    |
-| `make precommit` | Run formatters and linters           |
-
-Variables (override on the command line):
-
-| Variable         | Default        | Description                    |
-| ---------------- | -------------- | ------------------------------ |
-| `PORT`           | `8080`         | Web server port                |
-| `RESULTS_DIR`    | `./results`    | Results output directory       |
-| `BENCHMARKS_DIR` | `./benchmarks` | YAML benchmark cases directory |
+Open [http://localhost:8080](http://localhost:8080).
 
 ## Configuration
 
+### Make targets
+
+Everything runs through `make`. Run `make help` to see all targets.
+
+| Target           | Description                                        |
+| ---------------- | -------------------------------------------------- |
+| `make up`        | Start dev environment (hot-reload, source mounted) |
+| `make prod`      | Start production environment                       |
+| `make down`      | Stop all containers                                |
+| `make build`     | Build production Docker image                      |
+| `make test`      | Run tests with coverage via Docker                 |
+| `make clean`     | Stop containers and delete results                 |
+| `make results`   | Print a summary of all saved runs                  |
+| `make precommit` | Run formatters and linters                         |
+
+Override variables on the command line: `make up PORT=3000 RESULTS_DIR=./my-results`
+
 ### Environment variables
 
-| Variable         | Default                  | Description                                 |
-| ---------------- | ------------------------ | ------------------------------------------- |
-| `PORT`           | `8080`                   | Web server port                             |
-| `RESULTS_DIR`    | `./results`              | Results output directory                    |
-| `BENCHMARKS_DIR` | `./benchmarks`           | YAML benchmark cases directory              |
-| `OLLAMA_URL`     | `http://localhost:11434` | Ollama API base URL (overridable in the UI) |
-| `OPENAI_API_KEY` | —                        | Required for LLM judge scoring              |
-
-### CLI arguments
-
-```
-python -m src [OPTIONS]
-```
-
-| Argument           | Default          | Description                    |
-| ------------------ | ---------------- | ------------------------------ |
-| `--port`           | `8080` / `$PORT` | Web server port                |
-| `--results-dir`    | `./results`      | Results output directory       |
-| `--benchmarks-dir` | `./benchmarks`   | YAML benchmark cases directory |
-| `--debug`          | off              | Enable debug-level logging     |
-
-## Web UI Guide
-
-| Page          | URL                               | Description                                  |
-| ------------- | --------------------------------- | -------------------------------------------- |
-| Dashboard     | `/`                               | All runs with stats and average scores       |
-| Leaderboard   | `/leaderboard`                    | Sortable model ranking by score, speed, runs |
-| New Run       | `/runs/new`                       | Configure and start a benchmark run          |
-| Run Detail    | `/run/{model}/{run_id}`           | Per-test results table with scores           |
-| Test Detail   | `/run/{model}/{run_id}/{test_id}` | Prompt, response, and judge evaluation       |
-| Test Cases    | `/tests`                          | Browse, filter, create, edit, delete tests   |
-| Ollama Models | `/ollama`                         | Pull, list, and delete Ollama models         |
-| Compare       | `/compare`                        | Side-by-side run comparison                  |
+| Variable         | Default                  | Description                                       |
+| ---------------- | ------------------------ | ------------------------------------------------- |
+| `PORT`           | `8080`                   | Web server port                                   |
+| `RESULTS_DIR`    | `./results`              | Results output directory                          |
+| `BENCHMARKS_DIR` | `./benchmarks`           | YAML benchmark cases directory                    |
+| `OLLAMA_URL`     | `http://localhost:11434` | Ollama API base URL (overridable in the UI)       |
+| `LLAMACPP_URL`   | `http://localhost:8095`  | llama.cpp server base URL (overridable in the UI) |
+| `OPENAI_API_KEY` | —                        | Required for LLM judge scoring                    |
 
 ## Providers
 
 All provider configuration is done through the **New Run** page (`/runs/new`).
 
-### Ollama (local)
-
-Select "Ollama" as the provider, enter the model name (e.g., `llama3:8b`), and optionally change the Ollama URL. The URL defaults to `OLLAMA_URL` env var or `http://localhost:11434`.
-
-### OpenAI
-
-Select "OpenAI", enter your model name (e.g., `gpt-4o`) and API key. The key is used only for the duration of the run and is never stored on disk.
-
-### Google Gemini
-
-Select "Gemini", enter your model name (e.g., `gemini-2.5-flash`) and API key. Uses the Gemini OpenAI-compatible endpoint.
+- **Ollama** — select provider, enter model name (e.g., `llama3:8b`), optionally change Ollama URL
+- **llama.cpp** — point to a running llama.cpp server, supports batch running and auto-eviction
+- **OpenAI** — enter model name (e.g., `gpt-4o`) and API key (used only for the run, never stored)
+- **Gemini** — enter model name (e.g., `gemini-2.5-flash`) and API key (uses OpenAI-compatible endpoint)
 
 ## LLM Judge
 
-The judge uses an OpenAI model (default: `gpt-5.2-chat-latest`) to score LLM responses against expected issues on a 1–20 rubric:
+Uses an OpenAI model (default: `gpt-5.2-chat-latest`) to score responses against expected issues on a 1–20 rubric. Requires `OPENAI_API_KEY` env var or per-request key via the judge modal. Trigger from any run detail page with **Judge All**.
 
 | Score | Meaning                                                  |
 | ----- | -------------------------------------------------------- |
@@ -176,81 +135,58 @@ The judge uses an OpenAI model (default: `gpt-5.2-chat-latest`) to score LLM res
 | 5–8   | Few issues found, or vague explanations                  |
 | 1–4   | Issues missed, wrong analysis, or hallucinated bugs      |
 
-### Requirements
-
-Set `OPENAI_API_KEY` as an environment variable, or provide it per-request through the judge modal in the UI.
-
-### Usage
-
-1. Navigate to a run detail page (`/run/{model}/{run_id}`)
-2. Click **Judge All**
-3. Enter your API key (optional if env var is set) and judge model
-4. Watch the progress bar as each test is scored
-
 ## Test Suite
 
-The suite ships with 12 test cases across three categories:
+Ships with 12 test cases across three categories. Create, edit, and delete tests from the web UI at `/tests`, or add a `.yaml` file anywhere under `benchmarks/` (auto-discovered).
 
-### Go (5 tests)
+| ID                | Language | Title                                     | Difficulty |
+| ----------------- | -------- | ----------------------------------------- | ---------- |
+| `go_race_001`     | Go       | Race condition in concurrent counter      | easy       |
+| `go_deadlock_002` | Go       | Deadlock from inconsistent mutex ordering | medium     |
+| `go_chan_003`     | Go       | Unbuffered channel blocks forever         | easy       |
+| `go_retry_004`    | Go       | Retry loop off-by-one error               | medium     |
+| `go_grpc_005`     | Go       | Missing error handling in gRPC call       | easy       |
+| `py_race_001`     | Python   | Race condition on shared list             | easy       |
+| `py_deadlock_002` | Python   | Deadlock with non-reentrant lock          | medium     |
+| `py_retry_003`    | Python   | Broken exponential backoff                | medium     |
+| `py_socket_004`   | Python   | Missing error handling in socket code     | easy       |
+| `py_async_005`    | Python   | Asyncio task swallows cancellation        | hard       |
+| `theory_cap_001`  | Theory   | CAP Theorem trade-offs                    | medium     |
+| `theory_bft_002`  | Theory   | Byzantine Fault Tolerance                 | hard       |
 
-| ID                | Title                                     | Difficulty |
-| ----------------- | ----------------------------------------- | ---------- |
-| `go_race_001`     | Race condition in concurrent counter      | easy       |
-| `go_deadlock_002` | Deadlock from inconsistent mutex ordering | medium     |
-| `go_chan_003`     | Unbuffered channel blocks forever         | easy       |
-| `go_retry_004`    | Retry loop off-by-one error               | medium     |
-| `go_grpc_005`     | Missing error handling in gRPC call       | easy       |
-
-### Python (5 tests)
-
-| ID                | Title                                 | Difficulty |
-| ----------------- | ------------------------------------- | ---------- |
-| `py_race_001`     | Race condition on shared list         | easy       |
-| `py_deadlock_002` | Deadlock with non-reentrant lock      | medium     |
-| `py_retry_003`    | Broken exponential backoff            | medium     |
-| `py_socket_004`   | Missing error handling in socket code | easy       |
-| `py_async_005`    | Asyncio task swallows cancellation    | hard       |
-
-### Theory (2 tests)
-
-| ID               | Title                     | Difficulty |
-| ---------------- | ------------------------- | ---------- |
-| `theory_cap_001` | CAP Theorem trade-offs    | medium     |
-| `theory_bft_002` | Byzantine Fault Tolerance | hard       |
-
-### Adding new tests
-
-Create a new `.yaml` file anywhere under `benchmarks/`. It is auto-discovered — no code changes needed.
+<details>
+<summary>YAML format for new tests</summary>
 
 ```yaml
-id: unique_test_id # must be unique across all tests
+id: unique_test_id
 title: "Short description"
 language: go # go | python | theory (or any string)
 difficulty: easy # easy | medium | hard
-
 prompt: |
-  The prompt sent to the LLM. Describe what you want it to analyze.
-
-code: | # optional — omit entirely for theory questions
-  func main() {
-      // buggy code here
-  }
-
-expected_issues: # ground truth for judge scoring
+  The prompt sent to the LLM.
+code: | # optional — omit for theory questions
+  func main() { /* buggy code */ }
+expected_issues:
   - "Description of bug 1"
   - "Description of bug 2"
-
 notes: | # optional, not sent to the LLM
   Reviewer notes.
 ```
 
-You can also create, edit, and delete tests directly from the web UI at `/tests`.
+</details>
 
 ## Results Format
 
-Results are stored as JSON files in `results/<model_name>/run_NNN/`.
+Results are stored as JSON in `results/<model_name>/run_NNN/`:
 
-### Per-test result (`<test_id>.json`)
+- **`<test_id>.json`** — prompt sent, raw response, token counts, elapsed time, tok/s
+- **`<test_id>.judge.json`** — score, explanation, issues found/expected/matched/missed
+- **`metadata.json`** — run config (model, provider, temperature, system prompt, timestamps)
+
+<details>
+<summary>Example JSON structures</summary>
+
+**Per-test result** (`<test_id>.json`):
 
 ```json
 {
@@ -268,7 +204,7 @@ Results are stored as JSON files in `results/<model_name>/run_NNN/`.
 }
 ```
 
-### Judge result (`<test_id>.judge.json`)
+**Judge result** (`<test_id>.judge.json`):
 
 ```json
 {
@@ -280,119 +216,52 @@ Results are stored as JSON files in `results/<model_name>/run_NNN/`.
   "issues_expected": ["Unsynchronized access to shared counter"],
   "issues_matched": ["Unsynchronized access to shared counter"],
   "issues_missed": [],
-  "timestamp": "2025-03-26T10:35:00+00:00",
-  "judge_prompt_tokens": 1200,
-  "judge_completion_tokens": 180,
-  "judge_elapsed_seconds": 2.1,
-  "error": null
+  "timestamp": "2025-03-26T10:35:00+00:00"
 }
 ```
 
-### Run metadata (`metadata.json`)
+**Run metadata** (`metadata.json`):
 
 ```json
 {
   "run_id": "run_001",
   "model": "llama3:8b",
+  "provider": "ollama",
   "api_url": "http://localhost:11434/v1",
   "timestamp": "2025-03-26T10:30:00+00:00",
   "temperature": 0.1,
   "total_tests": 12,
   "total_elapsed_seconds": 58.4,
-  "avg_tokens_per_second": 72.3,
-  "test_ids": ["go_race_001", "..."],
-  "provider": "ollama",
-  "system_prompt": "You are a senior software engineer...",
-  "think": false
+  "avg_tokens_per_second": 72.3
 }
 ```
+
+</details>
 
 ## Architecture
 
 ```
 src/
-├── __init__.py
-├── __main__.py              # Entry point — starts FastAPI server
-├── models.py                # Frozen dataclasses for all data types
+├── __main__.py              # Entry point
+├── models.py                # Frozen dataclasses
 ├── exceptions.py            # Domain exceptions
 ├── metrics.py               # Token throughput calculation
 ├── core/
-│   ├── llm_client.py        # OpenAI SDK + Ollama native streaming client
+│   ├── llm_client.py        # OpenAI SDK + Ollama native streaming
 │   ├── llm_protocol.py      # LLMClientProtocol for DI
 │   ├── runner.py             # Benchmark execution with progress callbacks
-│   ├── judge.py              # LLM judge scoring (1–20 rubric)
+│   ├── judge.py              # LLM judge scoring
 │   ├── loader.py             # YAML test case discovery and CRUD
-│   ├── results.py            # JSON persistence for results/metadata/judge
-│   ├── ollama_manager.py     # Async Ollama REST API (list/pull/delete)
+│   ├── results.py            # JSON persistence
+│   ├── ollama_manager.py     # Async Ollama REST API
 │   └── leaderboard.py        # Cross-run score aggregation
 ├── web/
 │   ├── app.py                # FastAPI app factory
-│   ├── dependencies.py       # DI providers (Depends)
+│   ├── dependencies.py       # DI providers
 │   ├── task_manager.py       # Background task + SSE queue management
-│   └── routes/
-│       ├── dashboard.py      # GET /
-│       ├── runs.py           # Run execution, detail, progress SSE
-│       ├── tests.py          # Test CRUD
-│       ├── ollama.py         # Ollama model management
-│       ├── judge.py          # Judge trigger + SSE
-│       ├── leaderboard.py    # Sortable leaderboard
-│       ├── export.py         # CSV/Markdown download
-│       └── compare.py        # Side-by-side comparison
-├── templates/                # Jinja2 + HTMX + Tailwind templates
-│   ├── base.html
-│   ├── dashboard.html
-│   ├── leaderboard.html
-│   ├── run_detail.html
-│   ├── test_detail.html
-│   ├── compare.html
-│   ├── runs/
-│   ├── tests/
-│   ├── ollama/
-│   └── partials/
-benchmarks/                       # YAML benchmark cases (auto-discovered)
-├── go/
-├── python/
-└── theory/
-tests/                            # Pytest test files
-
+│   └── routes/               # dashboard, runs, tests, ollama, judge,
+│                             # leaderboard, export, compare
+├── templates/                # Jinja2 + HTMX + Tailwind
+benchmarks/                   # YAML benchmark cases (auto-discovered)
+tests/                        # Pytest
 ```
-
-## Docker
-
-```bash
-# Build and run
-docker compose build
-docker compose up
-
-# Or manually
-docker build -t llm-bug-bench .
-docker run --rm --network host -v $(pwd)/results:/app/results -v $(pwd)/benchmarks:/app/benchmarks llm-bug-bench
-```
-
-The container starts the web server on port 8080 by default.
-
-## Development
-
-```bash
-# Install dependencies
-poetry install
-
-# Run formatters and linters
-make precommit
-
-# Start with debug logging
-python -m src --debug
-```
-
-### Dependencies
-
-| Package            | Purpose                              |
-| ------------------ | ------------------------------------ |
-| `fastapi`          | Web framework                        |
-| `uvicorn`          | ASGI server                          |
-| `jinja2`           | Template engine                      |
-| `openai`           | LLM API client (all providers)       |
-| `httpx`            | Async HTTP for Ollama management API |
-| `pyyaml`           | YAML test case parsing               |
-| `python-dotenv`    | `.env` file loading                  |
-| `python-multipart` | Form data handling                   |
