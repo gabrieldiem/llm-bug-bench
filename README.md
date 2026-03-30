@@ -4,6 +4,22 @@ A web-based benchmark suite that evaluates LLMs' ability to detect bugs in code.
 
 Supports **Ollama** (local models), **OpenAI**, and **Google Gemini** as providers. Includes an LLM judge that automatically scores responses on a 1–20 rubric, a sortable leaderboard, and full test case management — all through a web UI.
 
+## Table of Contents
+
+- [Features](#features)
+- [Leaderboard](#leaderboard)
+- [Quick Start](#quick-start)
+- [Makefile Reference](#makefile-reference)
+- [Configuration](#configuration)
+- [Web UI Guide](#web-ui-guide)
+- [Providers](#providers)
+- [LLM Judge](#llm-judge)
+- [Test Suite](#test-suite)
+- [Results Format](#results-format)
+- [Architecture](#architecture)
+- [Docker](#docker)
+- [Development](#development)
+
 ## Features
 
 - **Multi-provider support** — run benchmarks against Ollama, OpenAI, or Gemini from a single interface
@@ -15,6 +31,48 @@ Supports **Ollama** (local models), **OpenAI**, and **Google Gemini** as provide
 - **Export** — download results as CSV or Markdown
 - **Dark mode** — toggle with system preference detection
 - **Real-time progress** — SSE streaming for run execution and judge scoring
+
+## Leaderboard
+
+Horizontal bar chart comparing each model's bug-detection accuracy on a 1–20 rubric scale. Each model shows its **best** (highest across all runs) and **latest** (most recent run) average scores, color-coded by performance tier: green (≥15), yellow (≥8), and red (<8).
+
+<p align="center">
+    <img src="./docs/imgs/leaderboard_latest.png" alt="LLMs leaderboard" height="1700px">
+</p>
+
+
+### Models tested
+
+| Cloud                 | Local (Ollama)                                                      |
+| --------------------- | ------------------------------------------------------------------- |
+| gpt-5.4               | qwen3.5:4b                                                          |
+| gpt-5.4-mini          | qwen3.5:2b                                                          |
+| gpt-5.4-nano          | qwen3.5:0.8b                                                        |
+| gpt-5.2               | gemma3:4b                                                           |
+| gpt-5.1               | gemma3:1b                                                           |
+| gpt-4.1-mini          | granite4:7b-a1b-h                                                   |
+| gemini-2.5-pro        | granite4:3b-h                                                       |
+| gemini-2.5-flash      | granite4:3b                                                         |
+| gemini-2.5-flash-lite | granite4:1b-h                                                       |
+|                       | granite4:1b                                                         |
+|                       | granite4:350m-h                                                     |
+|                       | granite4:350m                                                       |
+|                       | granite3.1-dense:8b                                                 |
+|                       | granite3.1-dense:2b                                                 |
+|                       | granite3.1-moe:3b                                                   |
+|                       | granite3.1-moe:1b                                                   |
+|                       | granite3.3:2b                                                       |
+|                       | granite-code:8b                                                     |
+|                       | granite-code:3b                                                     |
+|                       | rnj-1:8b                                                            |
+|                       | ministral-3:3b                                                      |
+|                       | lfm2.5-thinking:1.2b                                                |
+|                       | functiongemma:270m                                                  |
+|                       | unsloth/Ministral-3-14B-Reasoning-2512-GGUF:Q2_K_L                  |
+|                       | unsloth/Qwen3.5-4B-GGUF:Q5_K_XL                                     |
+|                       | unsloth/Qwen2.5-Coder-7B-Instruct-128K-GGUF:Q4_K_M                  |
+|                       | Jackrong/Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-GGUF:Q4_K_M |
+|                       | bartowski/glm-4-9b-chat-GGUF:IQ4_XS                                 |
 
 ## Quick Start
 
@@ -36,33 +94,33 @@ Open [http://localhost:8080](http://localhost:8080) in your browser.
 
 ## Makefile Reference
 
-| Target          | Description                              |
-| --------------- | ---------------------------------------- |
-| `make serve`    | Start the web UI (default port 8080)     |
-| `make build`    | Build the Docker image                   |
-| `make clean`    | Delete all results                       |
-| `make results`  | Print a summary of all saved runs        |
-| `make precommit`| Run formatters and linters               |
+| Target           | Description                          |
+| ---------------- | ------------------------------------ |
+| `make serve`     | Start the web UI (default port 8080) |
+| `make build`     | Build the Docker image               |
+| `make clean`     | Delete all results                   |
+| `make results`   | Print a summary of all saved runs    |
+| `make precommit` | Run formatters and linters           |
 
 Variables (override on the command line):
 
-| Variable       | Default      | Description              |
-| -------------- | ------------ | ------------------------ |
-| `PORT`         | `8080`       | Web server port          |
-| `RESULTS_DIR`  | `./results`  | Results output directory |
-| `BENCHMARKS_DIR`| `./benchmarks`| YAML benchmark cases directory|
+| Variable         | Default        | Description                    |
+| ---------------- | -------------- | ------------------------------ |
+| `PORT`           | `8080`         | Web server port                |
+| `RESULTS_DIR`    | `./results`    | Results output directory       |
+| `BENCHMARKS_DIR` | `./benchmarks` | YAML benchmark cases directory |
 
 ## Configuration
 
 ### Environment variables
 
-| Variable         | Default                    | Description                                |
-| ---------------- | -------------------------- | ------------------------------------------ |
-| `PORT`           | `8080`                     | Web server port                            |
-| `RESULTS_DIR`    | `./results`                | Results output directory                   |
-| `BENCHMARKS_DIR` | `./benchmarks`             | YAML benchmark cases directory             |
-| `OLLAMA_URL`     | `http://localhost:11434`   | Ollama API base URL (overridable in the UI)|
-| `OPENAI_API_KEY` | —                          | Required for LLM judge scoring             |
+| Variable         | Default                  | Description                                 |
+| ---------------- | ------------------------ | ------------------------------------------- |
+| `PORT`           | `8080`                   | Web server port                             |
+| `RESULTS_DIR`    | `./results`              | Results output directory                    |
+| `BENCHMARKS_DIR` | `./benchmarks`           | YAML benchmark cases directory              |
+| `OLLAMA_URL`     | `http://localhost:11434` | Ollama API base URL (overridable in the UI) |
+| `OPENAI_API_KEY` | —                        | Required for LLM judge scoring              |
 
 ### CLI arguments
 
@@ -70,25 +128,25 @@ Variables (override on the command line):
 python -m src [OPTIONS]
 ```
 
-| Argument        | Default              | Description                 |
-| --------------- | -------------------- | --------------------------- |
-| `--port`        | `8080` / `$PORT`     | Web server port             |
-| `--results-dir` | `./results`          | Results output directory    |
-| `--benchmarks-dir`| `./benchmarks`     | YAML benchmark cases directory|
-| `--debug`       | off                  | Enable debug-level logging  |
+| Argument           | Default          | Description                    |
+| ------------------ | ---------------- | ------------------------------ |
+| `--port`           | `8080` / `$PORT` | Web server port                |
+| `--results-dir`    | `./results`      | Results output directory       |
+| `--benchmarks-dir` | `./benchmarks`   | YAML benchmark cases directory |
+| `--debug`          | off              | Enable debug-level logging     |
 
 ## Web UI Guide
 
-| Page                     | URL                                         | Description                                    |
-| ------------------------ | ------------------------------------------- | ---------------------------------------------- |
-| Dashboard                | `/`                                         | All runs with stats and average scores         |
-| Leaderboard              | `/leaderboard`                              | Sortable model ranking by score, speed, runs   |
-| New Run                  | `/runs/new`                                 | Configure and start a benchmark run            |
-| Run Detail               | `/run/{model}/{run_id}`                     | Per-test results table with scores             |
-| Test Detail              | `/run/{model}/{run_id}/{test_id}`           | Prompt, response, and judge evaluation         |
-| Test Cases               | `/tests`                                    | Browse, filter, create, edit, delete tests     |
-| Ollama Models            | `/ollama`                                   | Pull, list, and delete Ollama models           |
-| Compare                  | `/compare`                                  | Side-by-side run comparison                    |
+| Page          | URL                               | Description                                  |
+| ------------- | --------------------------------- | -------------------------------------------- |
+| Dashboard     | `/`                               | All runs with stats and average scores       |
+| Leaderboard   | `/leaderboard`                    | Sortable model ranking by score, speed, runs |
+| New Run       | `/runs/new`                       | Configure and start a benchmark run          |
+| Run Detail    | `/run/{model}/{run_id}`           | Per-test results table with scores           |
+| Test Detail   | `/run/{model}/{run_id}/{test_id}` | Prompt, response, and judge evaluation       |
+| Test Cases    | `/tests`                          | Browse, filter, create, edit, delete tests   |
+| Ollama Models | `/ollama`                         | Pull, list, and delete Ollama models         |
+| Compare       | `/compare`                        | Side-by-side run comparison                  |
 
 ## Providers
 
@@ -110,13 +168,13 @@ Select "Gemini", enter your model name (e.g., `gemini-2.5-flash`) and API key. U
 
 The judge uses an OpenAI model (default: `gpt-5.2-chat-latest`) to score LLM responses against expected issues on a 1–20 rubric:
 
-| Score   | Meaning                                                  |
-| ------- | -------------------------------------------------------- |
-| 17–20   | All issues found with precise root cause and consequence |
-| 13–16   | Most issues found, minor gaps                            |
-| 9–12    | Some issues found, significant gaps                      |
-| 5–8     | Few issues found, or vague explanations                  |
-| 1–4     | Issues missed, wrong analysis, or hallucinated bugs      |
+| Score | Meaning                                                  |
+| ----- | -------------------------------------------------------- |
+| 17–20 | All issues found with precise root cause and consequence |
+| 13–16 | Most issues found, minor gaps                            |
+| 9–12  | Some issues found, significant gaps                      |
+| 5–8   | Few issues found, or vague explanations                  |
+| 1–4   | Issues missed, wrong analysis, or hallucinated bugs      |
 
 ### Requirements
 
@@ -139,7 +197,7 @@ The suite ships with 12 test cases across three categories:
 | ----------------- | ----------------------------------------- | ---------- |
 | `go_race_001`     | Race condition in concurrent counter      | easy       |
 | `go_deadlock_002` | Deadlock from inconsistent mutex ordering | medium     |
-| `go_chan_003`      | Unbuffered channel blocks forever         | easy       |
+| `go_chan_003`     | Unbuffered channel blocks forever         | easy       |
 | `go_retry_004`    | Retry loop off-by-one error               | medium     |
 | `go_grpc_005`     | Missing error handling in gRPC call       | easy       |
 
@@ -165,24 +223,24 @@ The suite ships with 12 test cases across three categories:
 Create a new `.yaml` file anywhere under `benchmarks/`. It is auto-discovered — no code changes needed.
 
 ```yaml
-id: unique_test_id        # must be unique across all tests
+id: unique_test_id # must be unique across all tests
 title: "Short description"
-language: go               # go | python | theory (or any string)
-difficulty: easy           # easy | medium | hard
+language: go # go | python | theory (or any string)
+difficulty: easy # easy | medium | hard
 
 prompt: |
   The prompt sent to the LLM. Describe what you want it to analyze.
 
-code: |                    # optional — omit entirely for theory questions
+code: | # optional — omit entirely for theory questions
   func main() {
       // buggy code here
   }
 
-expected_issues:           # ground truth for judge scoring
+expected_issues: # ground truth for judge scoring
   - "Description of bug 1"
   - "Description of bug 2"
 
-notes: |                   # optional, not sent to the LLM
+notes: | # optional, not sent to the LLM
   Reviewer notes.
 ```
 
@@ -328,13 +386,13 @@ python -m src --debug
 
 ### Dependencies
 
-| Package          | Purpose                              |
-| ---------------- | ------------------------------------ |
-| `fastapi`        | Web framework                        |
-| `uvicorn`        | ASGI server                          |
-| `jinja2`         | Template engine                      |
-| `openai`         | LLM API client (all providers)       |
-| `httpx`          | Async HTTP for Ollama management API |
-| `pyyaml`         | YAML test case parsing               |
-| `python-dotenv`  | `.env` file loading                  |
-| `python-multipart`| Form data handling                  |
+| Package            | Purpose                              |
+| ------------------ | ------------------------------------ |
+| `fastapi`          | Web framework                        |
+| `uvicorn`          | ASGI server                          |
+| `jinja2`           | Template engine                      |
+| `openai`           | LLM API client (all providers)       |
+| `httpx`            | Async HTTP for Ollama management API |
+| `pyyaml`           | YAML test case parsing               |
+| `python-dotenv`    | `.env` file loading                  |
+| `python-multipart` | Form data handling                   |
