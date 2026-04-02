@@ -71,6 +71,12 @@ Horizontal bar chart comparing each model's bug-detection accuracy on a 1–20 r
 |                       | unsloth/Qwen2.5-Coder-7B-Instruct-128K-GGUF:Q4_K_M                  |
 |                       | Jackrong/Qwen3.5-4B-Claude-4.6-Opus-Reasoning-Distilled-GGUF:Q4_K_M |
 |                       | bartowski/glm-4-9b-chat-GGUF:IQ4_XS                                 |
+|                       | unsloth/gemma-4-E4B-it-GGUF:Q3_K_S                                  |
+|                       | unsloth/gemma-4-E2B-it-GGUF:Q5_K_M                                  |
+|                       | unsloth/gemma-4-E2B-it-GGUF:Q5_K_XL                                 |
+|                       | unsloth/gemma-4-E2B-it-GGUF:UD-Q5_K_XL                              |
+|                       | unsloth/gemma-4-E2B-it-GGUF:Q6_K_XL                                 |
+|                       | unsloth/gemma-4-E2B-it-GGUF:Q4_K_M                                  |
 
 ## Quick Start
 
